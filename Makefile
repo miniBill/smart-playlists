@@ -1,5 +1,5 @@
 .PHONY: all
-all: build/spotify-web-api.json
+all: generated/Api.elm
 
 build/spotify-web-api-releases.json:
 	mkdir -p build
@@ -10,3 +10,8 @@ build/spotify-web-api.yaml: build/spotify-web-api-releases.json
 
 build/spotify-web-api.json: build/spotify-web-api.yaml
 	nix-shell -p yq --run 'yq "." $^' > $@
+
+GENERATOR_PATH = ../elm-api-sdk-generator
+
+generated/Api.elm: build/spotify-web-api.json
+	(export ORIGIN=$$(realpath --relative-to ${GENERATOR_PATH} $$(pwd)); cd ${GENERATOR_PATH}; npm run dev $$ORIGIN/build/spotify-web-api.json -- --output $$ORIGIN/generated/Api.elm)

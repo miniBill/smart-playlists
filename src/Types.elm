@@ -1,8 +1,8 @@
-module Types exposing (BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), ToBackend(..), ToFrontend(..))
+module Types exposing (BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
-import Http
+import Lamdera exposing (ClientId)
 import Url exposing (Url)
 
 
@@ -17,30 +17,35 @@ type alias Context =
     {}
 
 
+type Path
+    = Callback { state : String, code : String }
+    | Homepage
+
+
 type FrontendInnerModel
-    = Authorizing
-    | AuthorizationError Http.Error
-    | AuthorizationSuccessfull String
+    = GettingClientId
+    | ReadyForAuthentication ClientId
+    | GettingToken
 
 
 type alias BackendModel =
-    { message : String
-    }
+    {}
 
 
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
-    | GotAuthorization (Result Http.Error String)
 
 
 type ToBackend
-    = NoOpToBackend
+    = TBGetClientId
+    | TBGetToken { state : String, code : String }
 
 
 type BackendMsg
-    = NoOpBackendMsg
+    = BackendNop
 
 
 type ToFrontend
-    = NoOpToFrontend
+    = TFGotClientId ClientId
+    | TFWrongState

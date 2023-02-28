@@ -2,14 +2,16 @@ module Frontend exposing (app)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Element.WithContext as Element exposing (Element, fill, height, text, width)
+import Element.WithContext as Element exposing (Element, centerX, centerY, fill, height, link, text, width)
+import Element.WithContext.Font as Font
 import Env
-import Http
 import Lamdera
 import SHA256
-import Types exposing (..)
-import Url
+import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
+import Url exposing (Url)
 import Url.Builder
+import Url.Parser exposing ((<?>))
+import Url.Parser.Query
 
 
 app :
@@ -33,49 +35,73 @@ app =
         }
 
 
-init : Url.Url -> Nav.Key -> ( FrontendModel, Cmd FrontendMsg )
-init _ key =
-    ( { key = key
-      , inner = Authorizing
-      , context = {}
-      }
-    , Http.get
-        { url =
-            Url.Builder.crossOrigin "https://api.spotify.com"
-                [ "v1", "authorize" ]
-                [ Url.Builder.string "client_id" Env.clientId
-                , Url.Builder.string "response_type" "code"
-                , Url.Builder.string "redirect_url" Env.redirectUrl
-                , Url.Builder.string "state"
-                    (let
-                        _ =
-                            Debug.todo
-                     in
-                     "SOME RANDOM STRING"
-                    )
-                , Url.Builder.string "scopes" <|
-                    String.join " "
-                        [ "playlist-read-private"
-                        , "playlist-read-collaborative"
-                        , "playlist-modify-public"
-                        , "playlist-modify-private"
-                        , "user-library-read"
-                        ]
-                , Url.Builder.string "code_challenge_method" "S256"
-                , Url.Builder.string "code_challenge"
-                    (SHA256.fromString
-                        (let
-                            _ =
-                                Debug.todo
-                         in
-                         "SOMERANDOMCRAP"
-                        )
-                        |> SHA256.toHex
-                    )
+init : Url -> Nav.Key -> ( FrontendModel, Cmd FrontendMsg )
+init url key =
+    let
+        parser : Url.Parser.Parser (Path -> a) a
+        parser =
+            Url.Parser.oneOf
+                [ Url.Parser.s "callback"
+                    <?> Url.Parser.Query.map2
+                            (\code state ->
+                                case ( code, state ) of
+                                    ( Just cd, Just st ) ->
+                                        Callback
+                                            { code = cd
+                                            , state = st
+                                            }
+
+                                    _ ->
+                                        Homepage
+                            )
+                            (Url.Parser.Query.string "code")
+                            (Url.Parser.Query.string "state")
                 ]
-        , expect = Http.expectString GotAuthorization
-        }
-    )
+    in
+    case Url.Parser.parse parser url of
+        Just (Callback data) ->
+            ( { key = key
+              , inner = GettingToken
+              , context = {}
+              }
+            , Lamdera.sendToBackend <| TBGetToken data
+            )
+
+        Just Homepage ->
+            ( { key = key
+              , inner = GettingClientId
+              , context = {}
+              }
+            , Lamdera.sendToBackend TBGetClientId
+            )
+
+        Nothing ->
+            ( { key = key
+              , inner = GettingClientId
+              , context = {}
+              }
+            , Nav.load "/"
+            )
+
+
+authenticationUrl : { state : String } -> String
+authenticationUrl { state } =
+    Url.Builder.crossOrigin "https://accounts.spotify.com"
+        [ "authorize" ]
+        [ Url.Builder.string "client_id" Env.clientId
+        , Url.Builder.string "response_type" "code"
+        , Url.Builder.string "redirect_uri" Env.redirectUrl
+        , Url.Builder.string "state"
+            (SHA256.fromString state |> SHA256.toHex)
+        , Url.Builder.string "scopes" <|
+            String.join " "
+                [ "playlist-read-private"
+                , "playlist-read-collaborative"
+                , "playlist-modify-public"
+                , "playlist-modify-private"
+                , "user-library-read"
+                ]
+        ]
 
 
 update : FrontendMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
@@ -96,18 +122,17 @@ update msg model =
         UrlChanged _ ->
             ( model, Cmd.none )
 
-        GotAuthorization (Err err) ->
-            ( { model | inner = AuthorizationError err }, Cmd.none )
-
-        GotAuthorization (Ok res) ->
-            ( { model | inner = AuthorizationSuccessfull res }, Cmd.none )
-
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
-        NoOpToFrontend ->
-            ( model, Cmd.none )
+        TFGotClientId clientId ->
+            case model.inner of
+                GettingClientId ->
+                    ( { model | inner = ReadyForAuthentication clientId }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 view : FrontendModel -> Browser.Document FrontendMsg
@@ -126,11 +151,18 @@ view model =
 innerView : FrontendModel -> Element Context msg
 innerView model =
     case model.inner of
-        Authorizing ->
-            text "Authorization in progress..."
+        GettingClientId ->
+            text "Getting secure key from the server..."
 
-        AuthorizationError err ->
-            text <| "AuthorizationError: " ++ Debug.toString err
+        ReadyForAuthentication clientId ->
+            link
+                [ Font.underline
+                , centerX
+                , centerY
+                ]
+                { url = authenticationUrl { state = clientId }
+                , label = text "Login with Spotify"
+                }
 
-        AuthorizationSuccessfull res ->
-            text <| "AuthorizationSuccessfull: " ++ res
+        GettingToken ->
+            text "Getting token"

@@ -1,14 +1,26 @@
-module Types exposing (BackendModel, BackendMsg(..), FrontendModel, FrontendMsg(..), ToBackend(..), ToFrontend(..))
+module Types exposing (BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), ToBackend(..), ToFrontend(..))
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
+import Http
 import Url exposing (Url)
 
 
 type alias FrontendModel =
     { key : Key
-    , message : String
+    , inner : FrontendInnerModel
+    , context : Context
     }
+
+
+type alias Context =
+    {}
+
+
+type FrontendInnerModel
+    = Authorizing
+    | AuthorizationError Http.Error
+    | AuthorizationSuccessfull String
 
 
 type alias BackendModel =
@@ -19,7 +31,7 @@ type alias BackendModel =
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
-    | NoOpFrontendMsg
+    | GotAuthorization (Result Http.Error String)
 
 
 type ToBackend

@@ -1,8 +1,11 @@
 module Env exposing (..)
 
--- The Env.elm file is for per-environment configuration.
--- See https://dashboard.lamdera.app/docs/environment for more info.
+
+clientId : String
+clientId =
+    "f681a8e934f143bab3a6965b6b73dd8e"
 
 
-dummyConfigItem =
-    ""
+redirectUrl : String
+redirectUrl =
+    "http://localhost:8000/callback"

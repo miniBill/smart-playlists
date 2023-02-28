@@ -56,6 +56,7 @@ init url key =
                             )
                             (Url.Parser.Query.string "code")
                             (Url.Parser.Query.string "state")
+                , Url.Parser.map Homepage <| Url.Parser.top
                 ]
     in
     case Url.Parser.parse parser url of
@@ -69,15 +70,15 @@ init url key =
 
         Just Homepage ->
             ( { key = key
-              , inner = GettingClientId
+              , inner = GettingSessionId
               , context = {}
               }
-            , Lamdera.sendToBackend TBGetClientId
+            , Lamdera.sendToBackend TBGetSessionId
             )
 
         Nothing ->
             ( { key = key
-              , inner = GettingClientId
+              , inner = GettingSessionId
               , context = {}
               }
             , Nav.load "/"
@@ -126,13 +127,22 @@ update msg model =
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
-        TFGotClientId clientId ->
+        TFGotSessionId sessionId ->
             case model.inner of
-                GettingClientId ->
-                    ( { model | inner = ReadyForAuthentication clientId }, Cmd.none )
+                GettingSessionId ->
+                    ( { model | inner = ReadyForAuthentication sessionId }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
+
+        TFWrongState ->
+            ( { model | inner = GotError "Something went wrong during authentication: wrong state" }, Cmd.none )
+
+        TFGotAccessToken (Err _) ->
+            ( model, Nav.load "/" )
+
+        TFGotAccessToken (Ok accessToken) ->
+            ( { model | inner = LoggedIn accessToken }, Cmd.none )
 
 
 view : FrontendModel -> Browser.Document FrontendMsg
@@ -151,18 +161,24 @@ view model =
 innerView : FrontendModel -> Element Context msg
 innerView model =
     case model.inner of
-        GettingClientId ->
+        GettingSessionId ->
             text "Getting secure key from the server..."
 
-        ReadyForAuthentication clientId ->
+        ReadyForAuthentication sessionId ->
             link
                 [ Font.underline
                 , centerX
                 , centerY
                 ]
-                { url = authenticationUrl { state = clientId }
+                { url = authenticationUrl { state = sessionId }
                 , label = text "Login with Spotify"
                 }
 
         GettingToken ->
             text "Getting token"
+
+        GotError err ->
+            text <| "ERROR - " ++ err
+
+        LoggedIn accessToken ->
+            text <| "Logged in! " ++ Debug.toString accessToken

@@ -9,3 +9,8 @@ clientId =
 redirectUrl : String
 redirectUrl =
     "http://localhost:8000/callback"
+
+
+clientSecret : String
+clientSecret =
+    ""

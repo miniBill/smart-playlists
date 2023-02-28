@@ -1,8 +1,10 @@
-module Types exposing (BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
+module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
-import Lamdera exposing (ClientId)
+import Http
+import Lamdera exposing (ClientId, SessionId)
+import Time
 import Url exposing (Url)
 
 
@@ -23,9 +25,11 @@ type Path
 
 
 type FrontendInnerModel
-    = GettingClientId
-    | ReadyForAuthentication ClientId
+    = GettingSessionId
+    | ReadyForAuthentication SessionId
     | GettingToken
+    | GotError String
+    | LoggedIn AccessToken
 
 
 type alias BackendModel =
@@ -38,14 +42,22 @@ type FrontendMsg
 
 
 type ToBackend
-    = TBGetClientId
+    = TBGetSessionId
     | TBGetToken { state : String, code : String }
 
 
 type BackendMsg
-    = BackendNop
+    = BackendGotAccessToken ClientId (Result Http.Error AccessToken)
+
+
+type alias AccessToken =
+    { accessToken : String
+    , expiresAt : Time.Posix
+    , refreshToken : String
+    }
 
 
 type ToFrontend
-    = TFGotClientId ClientId
+    = TFGotSessionId SessionId
     | TFWrongState
+    | TFGotAccessToken (Result Http.Error AccessToken)

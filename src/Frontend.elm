@@ -2,7 +2,7 @@ module Frontend exposing (app)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Element.WithContext as Element exposing (Element, centerX, centerY, fill, height, link, text, width)
+import Element.WithContext as Element exposing (Element, centerX, centerY, fill, height, link, paragraph, text, width)
 import Element.WithContext.Font as Font
 import Env
 import Lamdera
@@ -21,7 +21,7 @@ app :
     , updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
     , subscriptions : FrontendModel -> Sub FrontendMsg
     , onUrlRequest : UrlRequest -> FrontendMsg
-    , onUrlChange : Url.Url -> FrontendMsg
+    , onUrlChange : Url -> FrontendMsg
     }
 app =
     Lamdera.frontend
@@ -162,7 +162,9 @@ innerView : FrontendModel -> Element Context msg
 innerView model =
     case model.inner of
         GettingSessionId ->
-            text "Getting secure key from the server..."
+            paragraph [ centerX, centerY ]
+                [ text "Getting secure key from the server..."
+                ]
 
         ReadyForAuthentication sessionId ->
             link
@@ -171,14 +173,23 @@ innerView model =
                 , centerY
                 ]
                 { url = authenticationUrl { state = sessionId }
-                , label = text "Login with Spotify"
+                , label = paragraph [] [ text "Login with Spotify" ]
                 }
 
         GettingToken ->
-            text "Getting token"
+            paragraph
+                [ centerX
+                , centerY
+                ]
+                [ text "Getting token from server..."
+                ]
 
         GotError err ->
-            text <| "ERROR - " ++ err
+            paragraph []
+                [ text <| "ERROR - " ++ err
+                ]
 
         LoggedIn accessToken ->
-            text <| "Logged in! " ++ Debug.toString accessToken
+            paragraph []
+                [ text <| "Logged in! " ++ Debug.toString accessToken
+                ]

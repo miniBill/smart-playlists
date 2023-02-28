@@ -66,3 +66,4 @@ config =
     , NoUnusedPorts.rule
     , Simplify.rule Simplify.defaults
     ]
+        |> List.map (Rule.ignoreErrorsForDirectories [ "generated/" ])

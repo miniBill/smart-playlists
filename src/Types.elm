@@ -1,5 +1,6 @@
-module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
+module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..), User)
 
+import Api
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Http
@@ -12,6 +13,7 @@ type alias FrontendModel =
     { key : Key
     , inner : FrontendInnerModel
     , context : Context
+    , here : Time.Zone
     }
 
 
@@ -29,7 +31,24 @@ type FrontendInnerModel
     | ReadyForAuthentication SessionId
     | GettingToken
     | GotError String
-    | LoggedIn AccessToken
+    | GettingUserId AccessToken
+    | LoggedIn
+        { accessToken : AccessToken
+        , user : User
+        }
+
+
+type alias AccessToken =
+    { accessToken : String
+    , expiresAt : Time.Posix
+    , refreshToken : String
+    }
+
+
+type alias User =
+    { id : String
+    , displayName : String
+    }
 
 
 type alias BackendModel =
@@ -39,6 +58,16 @@ type alias BackendModel =
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
+    | Here Time.Zone
+    | TimedMsg TimedMsg
+    | WithTime TimedMsg Time.Posix
+    | Noop
+    | GotPlaylists (Result Http.Error Api.PagedPlaylists)
+    | GotCurrentUserProfile (Result Http.Error User)
+
+
+type TimedMsg
+    = GetPlaylists
 
 
 type ToBackend
@@ -48,13 +77,6 @@ type ToBackend
 
 type BackendMsg
     = BackendGotAccessToken ClientId (Result Http.Error AccessToken)
-
-
-type alias AccessToken =
-    { accessToken : String
-    , expiresAt : Time.Posix
-    , refreshToken : String
-    }
 
 
 type ToFrontend

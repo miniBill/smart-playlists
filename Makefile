@@ -9,7 +9,7 @@ build/spotify-web-api.yaml: build/spotify-web-api-releases.json Makefile
 	curl -sSL $$(jq -r '.[0].assets[] | select(.name == "fixed-spotify-open-api.yml").browser_download_url' < $<) > $@
 
 build/spotify-web-api.json: build/spotify-web-api.yaml Makefile
-	nix-shell -p yq --run 'yq "." $<' > $@
+	nix-shell -p yq --run 'yq "." $<' > $@ || rm $@
 
 GENERATOR_PATH = ../elm-api-sdk-generator
 

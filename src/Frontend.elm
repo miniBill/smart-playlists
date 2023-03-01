@@ -1,13 +1,16 @@
 module Frontend exposing (app)
 
+import Api
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Element.WithContext as Element exposing (Element, centerX, centerY, fill, height, link, paragraph, text, width)
+import Element.WithContext as Element exposing (Element, centerX, centerY, fill, height, link, paragraph, text, textColumn, width)
 import Element.WithContext.Font as Font
 import Env
 import Lamdera
 import SHA256
-import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
+import Task
+import Time
+import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((<?>))
@@ -35,52 +38,58 @@ app =
         }
 
 
+urlParser : Url.Parser.Parser (Path -> a) a
+urlParser =
+    Url.Parser.oneOf
+        [ Url.Parser.s "callback"
+            <?> Url.Parser.Query.map2
+                    (\code state ->
+                        case ( code, state ) of
+                            ( Just cd, Just st ) ->
+                                Callback
+                                    { code = cd
+                                    , state = st
+                                    }
+
+                            _ ->
+                                Homepage
+                    )
+                    (Url.Parser.Query.string "code")
+                    (Url.Parser.Query.string "state")
+        , Url.Parser.map Homepage <| Url.Parser.top
+        ]
+
+
 init : Url -> Nav.Key -> ( FrontendModel, Cmd FrontendMsg )
 init url key =
     let
-        parser : Url.Parser.Parser (Path -> a) a
-        parser =
-            Url.Parser.oneOf
-                [ Url.Parser.s "callback"
-                    <?> Url.Parser.Query.map2
-                            (\code state ->
-                                case ( code, state ) of
-                                    ( Just cd, Just st ) ->
-                                        Callback
-                                            { code = cd
-                                            , state = st
-                                            }
-
-                                    _ ->
-                                        Homepage
-                            )
-                            (Url.Parser.Query.string "code")
-                            (Url.Parser.Query.string "state")
-                , Url.Parser.map Homepage <| Url.Parser.top
-                ]
+        toModel : FrontendInnerModel -> FrontendModel
+        toModel inner =
+            { key = key
+            , inner = inner
+            , context = {}
+            , here = Time.utc
+            }
     in
-    case Url.Parser.parse parser url of
+    case Url.Parser.parse urlParser url of
         Just (Callback data) ->
-            ( { key = key
-              , inner = GettingToken
-              , context = {}
-              }
-            , Lamdera.sendToBackend <| TBGetToken data
+            ( toModel GettingToken
+            , [ Task.perform Here Time.here
+              , Lamdera.sendToBackend <| TBGetToken data
+              ]
+                |> Cmd.batch
             )
 
         Just Homepage ->
-            ( { key = key
-              , inner = GettingSessionId
-              , context = {}
-              }
-            , Lamdera.sendToBackend TBGetSessionId
+            ( toModel GettingSessionId
+            , [ Task.perform Here Time.here
+              , Lamdera.sendToBackend TBGetSessionId
+              ]
+                |> Cmd.batch
             )
 
         Nothing ->
-            ( { key = key
-              , inner = GettingSessionId
-              , context = {}
-              }
+            ( toModel GettingSessionId
             , Nav.load "/"
             )
 
@@ -123,6 +132,74 @@ update msg model =
         UrlChanged _ ->
             ( model, Cmd.none )
 
+        Here here ->
+            ( { model | here = here }, Cmd.none )
+
+        TimedMsg tmsg ->
+            ( model, Task.perform (WithTime tmsg) Time.now )
+
+        WithTime tmsg time ->
+            timedUpdate time tmsg model
+
+        Noop ->
+            ( model, Cmd.none )
+
+        GotPlaylists (Ok playlists) ->
+            let
+                _ =
+                    Debug.log "playlists" playlists
+            in
+            Debug.todo "branch 'GotPlaylists _' not implemented"
+
+        GotCurrentUserProfile (Ok user) ->
+            case model.inner of
+                GettingUserId accessToken ->
+                    ( { model | inner = LoggedIn { accessToken = accessToken, user = user } }
+                    , Cmd.none
+                    )
+
+                LoggedIn { accessToken } ->
+                    ( { model | inner = LoggedIn { accessToken = accessToken, user = user } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotCurrentUserProfile (Err e) ->
+            let
+                _ =
+                    Debug.log "GotCurrentUserProfile error" e
+            in
+            Debug.todo "branch 'GotCurrentUserProfile (Err _)' not implemented"
+
+        GotPlaylists (Err _) ->
+            Debug.todo "branch 'GotPlaylists (Err _)' not implemented"
+
+
+timedUpdate : Time.Posix -> TimedMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
+timedUpdate now msg model =
+    case model.inner of
+        LoggedIn { accessToken, user } ->
+            case msg of
+                GetPlaylists ->
+                    ( model
+                    , Api.getListUsersPlaylists
+                        { authorization =
+                            { bearer = accessToken.accessToken
+                            }
+                        , params =
+                            { limit = Nothing
+                            , offset = Nothing
+                            , user_id = user.id
+                            }
+                        , toMsg = GotPlaylists
+                        }
+                    )
+
+        _ ->
+            ( model, Cmd.none )
+
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -142,7 +219,19 @@ updateFromBackend msg model =
             ( model, Nav.load "/" )
 
         TFGotAccessToken (Ok accessToken) ->
-            ( { model | inner = LoggedIn accessToken }, Cmd.none )
+            ( { model | inner = GettingUserId accessToken }
+            , Api.getCurrentUsersProfile
+                { authorization = { bearer = accessToken.accessToken }
+                , toMsg =
+                    GotCurrentUserProfile
+                        << Result.map
+                            (\user ->
+                                { id = user.id
+                                , displayName = user.displayName
+                                }
+                            )
+                }
+            )
 
 
 view : FrontendModel -> Browser.Document FrontendMsg
@@ -189,7 +278,16 @@ innerView model =
                 [ text <| "ERROR - " ++ err
                 ]
 
-        LoggedIn accessToken ->
-            paragraph []
-                [ text <| "Logged in! " ++ Debug.toString accessToken
+        GettingUserId _ ->
+            paragraph [] [ text "Logging in..." ]
+
+        LoggedIn { accessToken, user } ->
+            textColumn []
+                [ paragraph []
+                    [ text "Logged in!" ]
+                , paragraph []
+                    [ text <| "Current user: " ++ user.displayName ]
+                , paragraph []
+                    [ text <| Debug.toString accessToken.expiresAt
+                    ]
                 ]

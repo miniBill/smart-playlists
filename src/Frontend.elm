@@ -181,18 +181,17 @@ update msg model =
 timedUpdate : Time.Posix -> TimedMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 timedUpdate _ msg model =
     case model.inner of
-        LoggedIn { accessToken, user } ->
+        LoggedIn { accessToken } ->
             case msg of
                 GetPlaylists ->
                     ( model
-                    , Api.getListUsersPlaylists
+                    , Api.getAListOfCurrentUsersPlaylists
                         { authorization =
                             { bearer = accessToken.accessToken
                             }
                         , params =
                             { limit = Nothing
                             , offset = Nothing
-                            , user_id = user.id
                             }
                         , toMsg = GotPlaylists
                         }

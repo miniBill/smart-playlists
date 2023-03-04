@@ -3,14 +3,15 @@ module Frontend exposing (app)
 import Api
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Element.WithContext as Element exposing (Element, centerX, centerY, fill, height, link, paragraph, text, textColumn, width)
+import Element.WithContext as Element exposing (centerX, centerY, fill, height, link, paragraph, text, textColumn, width)
 import Element.WithContext.Font as Font
 import Env
 import Lamdera
 import SHA256
 import Task
+import Theme exposing (Element)
 import Time
-import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
+import Types exposing (FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((<?>))
@@ -149,7 +150,7 @@ update msg model =
                 _ =
                     Debug.log "playlists" playlists
             in
-            Debug.todo "branch 'GotPlaylists _' not implemented"
+            Debug.todo "branch 'GotPlaylists (Ok _)' not implemented"
 
         GotCurrentUserProfile (Ok user) ->
             case model.inner of
@@ -178,7 +179,7 @@ update msg model =
 
 
 timedUpdate : Time.Posix -> TimedMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
-timedUpdate now msg model =
+timedUpdate _ msg model =
     case model.inner of
         LoggedIn { accessToken, user } ->
             case msg of
@@ -227,7 +228,7 @@ updateFromBackend msg model =
                         << Result.map
                             (\user ->
                                 { id = user.id
-                                , displayName = user.displayName
+                                , displayName = user.display_name
                                 }
                             )
                 }
@@ -247,7 +248,7 @@ view model =
     }
 
 
-innerView : FrontendModel -> Element Context msg
+innerView : FrontendModel -> Element FrontendMsg
 innerView model =
     case model.inner of
         GettingSessionId ->
@@ -281,13 +282,14 @@ innerView model =
         GettingUserId _ ->
             paragraph [] [ text "Logging in..." ]
 
-        LoggedIn { accessToken, user } ->
+        LoggedIn { user } ->
             textColumn []
                 [ paragraph []
                     [ text "Logged in!" ]
                 , paragraph []
                     [ text <| "Current user: " ++ user.displayName ]
-                , paragraph []
-                    [ text <| Debug.toString accessToken.expiresAt
-                    ]
+                , Theme.button []
+                    { onPress = Just <| TimedMsg GetPlaylists
+                    , label = text "Get your playlists"
+                    }
                 ]

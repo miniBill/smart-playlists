@@ -1,11 +1,10 @@
 --- build/spotify-web-api-original.yaml
 +++ build/spotify-web-api-fixed.yaml
-@@ -4785,6 +4785,15 @@
+@@ -4785,6 +4785,14 @@
      PrivateUserObject:
        type: object
        x-spotify-docs-type: PrivateUserObject
 +      required:
-+      - country
 +      - display_name
 +      - external_urls
 +      - followers

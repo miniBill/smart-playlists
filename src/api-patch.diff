@@ -1,0 +1,18 @@
+--- build/spotify-web-api-original.yaml	2023-03-11 20:38:31.914493198 +0100
++++ build/spotify-web-api-fixed.yaml	2023-03-11 20:38:26.326539361 +0100
+@@ -4785,6 +4785,15 @@
+     PrivateUserObject:
+       type: object
+       x-spotify-docs-type: PrivateUserObject
++      required:
++      - country
++      - display_name
++      - external_urls
++      - followers
++      - href
++      - id
++      - type
++      - uri
+       properties:
+         country:
+           type: string

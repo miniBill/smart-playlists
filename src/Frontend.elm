@@ -216,7 +216,11 @@ updateFromBackend msg model =
             ( { model | inner = GotError "Something went wrong during authentication: wrong state" }, Cmd.none )
 
         TFGotAccessToken (Err _) ->
-            ( model, Nav.load "/" )
+            if Env.mode == Env.Production then
+                ( model, Nav.load "/" )
+
+            else
+                ( model, Cmd.none )
 
         TFGotAccessToken (Ok accessToken) ->
             ( { model | inner = GettingUserId accessToken }

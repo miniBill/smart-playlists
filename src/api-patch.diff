@@ -1,5 +1,5 @@
---- build/spotify-web-api-original.yaml	2023-03-11 20:38:31.914493198 +0100
-+++ build/spotify-web-api-fixed.yaml	2023-03-11 20:38:26.326539361 +0100
+--- build/spotify-web-api-original.yaml
++++ build/spotify-web-api-fixed.yaml
 @@ -4785,6 +4785,15 @@
      PrivateUserObject:
        type: object

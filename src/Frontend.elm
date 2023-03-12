@@ -1,17 +1,20 @@
 module Frontend exposing (app)
 
-import Api
+import Api exposing (Nullable(..))
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Element.WithContext as Element exposing (centerX, centerY, fill, height, link, paragraph, text, textColumn, width)
+import Element.WithContext as Element exposing (centerX, centerY, column, el, fill, height, link, paddingEach, paragraph, rgb, shrink, text, textColumn, width)
+import Element.WithContext.Border as Border
 import Element.WithContext.Font as Font
 import Env
+import Http
 import Lamdera
+import RemoteData exposing (RemoteData(..))
 import SHA256
 import Task
 import Theme exposing (Element)
 import Time
-import Types exposing (FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
+import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((<?>))
@@ -142,25 +145,45 @@ update msg model =
         WithTime tmsg time ->
             timedUpdate time tmsg model
 
-        Noop ->
-            ( model, Cmd.none )
+        GotPlaylists result ->
+            case model.inner of
+                LoggedIn inner ->
+                    ( { model
+                        | inner =
+                            LoggedIn
+                                { inner
+                                    | playlists = RemoteData.fromResult result
+                                }
+                      }
+                    , Cmd.none
+                    )
 
-        GotPlaylists (Ok playlists) ->
-            let
-                _ =
-                    Debug.log "playlists" playlists
-            in
-            Debug.todo "branch 'GotPlaylists (Ok _)' not implemented"
+                _ ->
+                    ( model, Cmd.none )
 
         GotCurrentUserProfile (Ok user) ->
             case model.inner of
                 GettingUserId accessToken ->
-                    ( { model | inner = LoggedIn { accessToken = accessToken, user = user } }
-                    , Cmd.none
+                    ( { model
+                        | inner =
+                            LoggedIn
+                                { accessToken = accessToken
+                                , user = user
+                                , playlists = NotAsked
+                                }
+                      }
+                    , Nav.pushUrl model.key "/"
                     )
 
                 LoggedIn { accessToken } ->
-                    ( { model | inner = LoggedIn { accessToken = accessToken, user = user } }
+                    ( { model
+                        | inner =
+                            LoggedIn
+                                { accessToken = accessToken
+                                , user = user
+                                , playlists = NotAsked
+                                }
+                      }
                     , Cmd.none
                     )
 
@@ -174,20 +197,23 @@ update msg model =
             in
             Debug.todo "branch 'GotCurrentUserProfile (Err _)' not implemented"
 
-        GotPlaylists (Err _) ->
-            Debug.todo "branch 'GotPlaylists (Err _)' not implemented"
-
 
 timedUpdate : Time.Posix -> TimedMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 timedUpdate _ msg model =
     case model.inner of
-        LoggedIn { accessToken } ->
+        LoggedIn inner ->
             case msg of
                 GetPlaylists ->
-                    ( model
+                    ( { model
+                        | inner =
+                            LoggedIn
+                                { inner
+                                    | playlists = Loading
+                                }
+                      }
                     , Api.getAListOfCurrentUsersPlaylists
                         { authorization =
-                            { bearer = accessToken.accessToken
+                            { bearer = inner.accessToken.accessToken
                             }
                         , params =
                             { limit = Nothing
@@ -216,11 +242,7 @@ updateFromBackend msg model =
             ( { model | inner = GotError "Something went wrong during authentication: wrong state" }, Cmd.none )
 
         TFGotAccessToken (Err _) ->
-            if Env.mode == Env.Production then
-                ( model, Nav.load "/" )
-
-            else
-                ( model, Cmd.none )
+            ( model, Nav.load "/" )
 
         TFGotAccessToken (Ok accessToken) ->
             ( { model | inner = GettingUserId accessToken }
@@ -285,14 +307,118 @@ innerView model =
         GettingUserId _ ->
             paragraph [] [ text "Logging in..." ]
 
-        LoggedIn { user } ->
-            textColumn []
-                [ paragraph []
-                    [ text "Logged in!" ]
-                , paragraph []
-                    [ text <| "Current user: " ++ user.displayName ]
+        LoggedIn { user, playlists } ->
+            column
+                [ Theme.spacing
+                , Theme.padding
+                ]
+                [ textColumn []
+                    [ paragraph []
+                        [ text "Logged in!" ]
+                    , paragraph []
+                        [ text <| "Current user: " ++ user.displayName ]
+                    ]
                 , Theme.button []
                     { onPress = Just <| TimedMsg GetPlaylists
                     , label = text "Get your playlists"
                     }
+                , viewPlaylists playlists
                 ]
+
+
+viewPlaylists : RemoteData Http.Error Api.PagedPlaylists -> Element FrontendMsg
+viewPlaylists playlistsData =
+    case playlistsData of
+        NotAsked ->
+            Element.none
+
+        Loading ->
+            text "Loading..."
+
+        Failure err ->
+            let
+                ( visible, hidden ) =
+                    httpErrorToUserAndHiddenString err
+            in
+            Element.row []
+                [ text visible
+                , el [ Font.color <| rgb 1 1 1 ] <| text hidden
+                ]
+
+        Success playlists ->
+            innerViewPlaylists playlists
+
+
+innerViewPlaylists : Api.PagedPlaylists -> Element FrontendMsg
+innerViewPlaylists playlists =
+    let
+        header : String -> Element msg
+        header label =
+            el
+                [ Border.widthEach
+                    { top = 0
+                    , left = 0
+                    , right = 0
+                    , bottom = 1
+                    }
+                , paddingEach
+                    { top = 0
+                    , left = 0
+                    , right = 10
+                    , bottom = 2
+                    }
+                ]
+                (text label)
+
+        shrinkColumn :
+            String
+            -> (obj -> String)
+            -> Element.Column Context obj msg
+        shrinkColumn label prop =
+            { header = header label
+            , width = shrink
+            , view = text << prop
+            }
+    in
+    column [ Theme.spacing ]
+        [ Element.table []
+            { data = playlists.items
+            , columns =
+                [ shrinkColumn "Name" .name
+                ]
+            }
+        , text <|
+            "Showing "
+                ++ String.fromInt (List.length playlists.items)
+                ++ " playlists out of "
+                ++ String.fromInt playlists.total
+        ]
+
+
+httpErrorToUserAndHiddenString : Http.Error -> ( String, String )
+httpErrorToUserAndHiddenString err =
+    case err of
+        Http.BadStatus code ->
+            ( "Unexpected answer from the server"
+            , "BadStatus " ++ String.fromInt code
+            )
+
+        Http.BadUrl url ->
+            ( "Something went wrong"
+            , "BadUrl " ++ url
+            )
+
+        Http.Timeout ->
+            ( "No reply from the server"
+            , "Timeout"
+            )
+
+        Http.NetworkError ->
+            ( "Error connecting to the server"
+            , "NetworkError"
+            )
+
+        Http.BadBody msg ->
+            ( "Unexpected answer from the server"
+            , "BadBody " ++ msg
+            )

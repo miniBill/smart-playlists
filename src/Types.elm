@@ -5,6 +5,7 @@ import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Http
 import Lamdera exposing (ClientId, SessionId)
+import RemoteData exposing (RemoteData)
 import Time
 import Url exposing (Url)
 
@@ -35,6 +36,7 @@ type FrontendInnerModel
     | LoggedIn
         { accessToken : AccessToken
         , user : User
+        , playlists : RemoteData Http.Error Api.PagedPlaylists
         }
 
 
@@ -61,7 +63,6 @@ type FrontendMsg
     | Here Time.Zone
     | TimedMsg TimedMsg
     | WithTime TimedMsg Time.Posix
-    | Noop
     | GotPlaylists (Result Http.Error Api.PagedPlaylists)
     | GotCurrentUserProfile (Result Http.Error User)
 

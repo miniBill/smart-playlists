@@ -15,3 +15,32 @@
        properties:
          country:
            type: string
+@@ -5609,6 +5617,8 @@
+       allOf:
+       - $ref: '#/components/schemas/PagingObject'
+       - type: object
++        required:
++        - items
+         properties:
+           items:
+             type: array
+@@ -6022,6 +6032,19 @@
+     SimplifiedPlaylistObject:
+       type: object
+       x-spotify-docs-type: SimplifiedPlaylistObject
++      required:
++      - id
++      - name
++      - description
++      - collaborative
++      - href
++      - images
++      - owner 
++      - public
++      - snapshot_id
++      - tracks
++      - type
++      - uri
+       properties:
+         collaborative:
+           type: boolean

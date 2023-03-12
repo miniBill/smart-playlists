@@ -1,9 +1,10 @@
 module Frontend exposing (app)
 
-import Api
+import Api exposing (SimplifiedPlaylistObject)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Element.WithContext as Element exposing (centerX, centerY, column, el, fill, height, link, paddingEach, paragraph, rgb, shrink, text, textColumn, width)
+import Element.WithContext.Background as Background
 import Element.WithContext.Border as Border
 import Element.WithContext.Font as Font
 import Env
@@ -11,7 +12,7 @@ import Http
 import Lamdera
 import RemoteData exposing (RemoteData(..))
 import SHA256
-import Task
+import Task exposing (Task)
 import Theme exposing (Element)
 import Time
 import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
@@ -211,7 +212,7 @@ timedUpdate _ msg model =
                                     | playlists = Loading
                                 }
                       }
-                    , Api.getAListOfCurrentUsersPlaylists
+                    , unpaginate Api.getAListOfCurrentUsersPlaylistsTask
                         { authorization =
                             { bearer = inner.accessToken.accessToken
                             }
@@ -225,6 +226,33 @@ timedUpdate _ msg model =
 
         _ ->
             ( model, Cmd.none )
+
+
+unpaginate :
+    ({ params : { params | offset : Maybe Int }, authorization : authorization }
+     -> Task err { paginated | items : List item, total : Int }
+    )
+    -> { params : { params | offset : Maybe Int }, authorization : authorization, toMsg : Result err (List item) -> msg }
+    -> Cmd msg
+unpaginate toTask { params, authorization, toMsg } =
+    let
+        go : Int -> List (List item) -> Task err (List item)
+        go offset acc =
+            toTask { params = { params | offset = Just offset }, authorization = authorization }
+                |> Task.andThen
+                    (\paginated ->
+                        if offset + List.length paginated.items < paginated.total then
+                            go (offset + List.length paginated.items) (paginated.items :: acc)
+
+                        else
+                            (paginated.items :: acc)
+                                |> List.reverse
+                                |> List.concat
+                                |> Task.succeed
+                    )
+    in
+    go (Maybe.withDefault 0 params.offset) []
+        |> Task.attempt toMsg
 
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
@@ -267,6 +295,7 @@ view model =
         [ Element.layout model.context
             [ width fill
             , height fill
+            , Background.color Theme.color.offWhite
             ]
             (innerView model)
         ]
@@ -318,15 +347,22 @@ innerView model =
                     , paragraph []
                         [ text <| "Current user: " ++ user.displayName ]
                     ]
-                , Theme.button []
-                    { onPress = Just <| TimedMsg GetPlaylists
-                    , label = text "Get your playlists"
-                    }
+                , if playlists == NotAsked then
+                    Theme.buttonPrimary []
+                        { onPress = Just <| TimedMsg GetPlaylists
+                        , label = text "Get your playlists"
+                        }
+
+                  else
+                    Theme.buttonSecondary []
+                        { onPress = Just <| TimedMsg GetPlaylists
+                        , label = text "Update playlists' list"
+                        }
                 , viewPlaylists playlists
                 ]
 
 
-viewPlaylists : RemoteData Http.Error Api.PagedPlaylists -> Element FrontendMsg
+viewPlaylists : RemoteData Http.Error (List SimplifiedPlaylistObject) -> Element FrontendMsg
 viewPlaylists playlistsData =
     case playlistsData of
         NotAsked ->
@@ -349,7 +385,7 @@ viewPlaylists playlistsData =
             innerViewPlaylists playlists
 
 
-innerViewPlaylists : Api.PagedPlaylists -> Element FrontendMsg
+innerViewPlaylists : List SimplifiedPlaylistObject -> Element FrontendMsg
 innerViewPlaylists playlists =
     let
         header : String -> Element msg
@@ -382,16 +418,15 @@ innerViewPlaylists playlists =
     in
     column [ Theme.spacing ]
         [ Element.table []
-            { data = playlists.items
+            { data = playlists
             , columns =
                 [ shrinkColumn "Name" .name
                 ]
             }
         , text <|
             "Showing "
-                ++ String.fromInt (List.length playlists.items)
-                ++ " playlists out of "
-                ++ String.fromInt playlists.total
+                ++ String.fromInt (List.length playlists)
+                ++ " playlists"
         ]
 
 

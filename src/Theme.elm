@@ -1,7 +1,9 @@
-module Theme exposing (Attribute, Element, button, padding, rythm, spacing)
+module Theme exposing (Attribute, Element, buttonPrimary, buttonSecondary, color, padding, rythm, spacing)
 
-import Element.WithContext as Element
+import Element.WithContext as Element exposing (Color)
+import Element.WithContext.Background as Background
 import Element.WithContext.Border as Border
+import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
 import Types exposing (Context)
 
@@ -29,12 +31,51 @@ rythm =
     10
 
 
-button :
+buttonPrimary :
     List (Attribute msg)
     ->
         { onPress : Maybe msg
         , label : Element msg
         }
     -> Element msg
-button attrs =
-    Input.button ([ padding, Border.width 1, Border.rounded rythm ] ++ attrs)
+buttonPrimary attrs =
+    Input.button
+        ([ padding
+         , Border.width 1
+         , Border.rounded rythm
+         , Border.color color.primary
+         , Font.color color.offWhite
+         , Background.color color.primary
+         ]
+            ++ attrs
+        )
+
+
+buttonSecondary :
+    List (Attribute msg)
+    ->
+        { onPress : Maybe msg
+        , label : Element msg
+        }
+    -> Element msg
+buttonSecondary attrs =
+    Input.button
+        ([ padding
+         , Border.width 1
+         , Border.rounded rythm
+         , Border.color color.primary
+         , Font.color color.primary
+         , Background.color color.offWhite
+         ]
+            ++ attrs
+        )
+
+
+color :
+    { primary : Color
+    , offWhite : Color
+    }
+color =
+    { primary = Element.rgb255 0x2F 0x9C 0x95
+    , offWhite = Element.rgb255 0xF1 0xF7 0xED
+    }

@@ -1,6 +1,6 @@
 module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..), User)
 
-import Api
+import Api exposing (SimplifiedPlaylistObject)
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Http
@@ -36,7 +36,7 @@ type FrontendInnerModel
     | LoggedIn
         { accessToken : AccessToken
         , user : User
-        , playlists : RemoteData Http.Error Api.PagedPlaylists
+        , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
         }
 
 
@@ -63,7 +63,7 @@ type FrontendMsg
     | Here Time.Zone
     | TimedMsg TimedMsg
     | WithTime TimedMsg Time.Posix
-    | GotPlaylists (Result Http.Error Api.PagedPlaylists)
+    | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
     | GotCurrentUserProfile (Result Http.Error User)
 
 

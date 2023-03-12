@@ -1,6 +1,6 @@
 module Frontend exposing (app)
 
-import Api exposing (Nullable(..))
+import Api
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Element.WithContext as Element exposing (centerX, centerY, column, el, fill, height, link, paddingEach, paragraph, rgb, shrink, text, textColumn, width)
@@ -364,7 +364,7 @@ innerViewPlaylists playlists =
                 , paddingEach
                     { top = 0
                     , left = 0
-                    , right = 10
+                    , right = Theme.rythm
                     , bottom = 2
                     }
                 ]

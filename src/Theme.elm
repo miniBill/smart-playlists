@@ -1,14 +1,8 @@
 module Theme exposing (Attribute, Element, button, padding, rythm, spacing)
 
-import Element.WithContext as Element exposing (column, fill, height, row, text, width)
-import Element.WithContext.Background as Background
+import Element.WithContext as Element
 import Element.WithContext.Border as Border
-import Element.WithContext.Events as Events
-import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
-import Element.WithContext.Keyed as Keyed
-import Element.WithContext.Lazy as Lazy
-import Element.WithContext.Region as Region
 import Types exposing (Context)
 
 

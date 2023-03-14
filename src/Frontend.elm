@@ -14,7 +14,7 @@ import SHA256
 import Task
 import Theme exposing (Element)
 import Time
-import Types exposing (FrontendInnerModel(..), FrontendModel, FrontendMsg(..), LoggedInMsg, Path(..), ToBackend(..), ToFrontend(..))
+import Types exposing (FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((<?>))
@@ -184,7 +184,7 @@ update msg model =
             Debug.todo "branch 'GotCurrentUserProfile (Err _)' not implemented"
 
 
-timedUpdate : Time.Posix -> LoggedInMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
+timedUpdate : Time.Posix -> LoggedIn.Msg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 timedUpdate now msg model =
     case model.inner of
         LoggedIn loggedInModel ->

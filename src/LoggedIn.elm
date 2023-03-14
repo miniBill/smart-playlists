@@ -1,4 +1,4 @@
-module LoggedIn exposing (update, view)
+module LoggedIn exposing (AccessToken, Id, Model, Msg(..), User, update, view)
 
 import Api exposing (SimplifiedPlaylistObject)
 import Element.WithContext as Element exposing (column, el, paddingEach, paragraph, rgb, shrink, text, textColumn)
@@ -8,12 +8,42 @@ import Element.WithContext.Input as Input
 import Http
 import RemoteData exposing (RemoteData(..))
 import Task exposing (Task)
-import Theme exposing (Element)
+import Theme exposing (Context, Element)
 import Time
-import Types exposing (Context, LoggedInModel, LoggedInMsg(..))
 
 
-update : Time.Posix -> LoggedInMsg -> LoggedInModel -> ( LoggedInModel, Cmd LoggedInMsg )
+type alias Model =
+    { accessToken : AccessToken
+    , user : User
+    , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
+    , selectedPlaylist : Maybe Id
+    }
+
+
+type alias AccessToken =
+    { accessToken : String
+    , expiresAt : Time.Posix
+    , refreshToken : String
+    }
+
+
+type alias User =
+    { id : String
+    , displayName : String
+    }
+
+
+type alias Id =
+    String
+
+
+type Msg
+    = GetPlaylists
+    | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
+    | SelectPlaylist (Maybe Id)
+
+
+update : Time.Posix -> Msg -> Model -> ( Model, Cmd Msg )
 update _ msg model =
     case msg of
         GetPlaylists ->
@@ -70,8 +100,8 @@ unpaginate toTask { params, authorization, toMsg } =
         |> Task.attempt toMsg
 
 
-view : LoggedInModel -> Element LoggedInMsg
-view ({ user, playlists } as loggedInModel) =
+view : Model -> Element Msg
+view ({ user, playlists } as model) =
     column
         [ Theme.spacing
         , Theme.padding
@@ -93,11 +123,11 @@ view ({ user, playlists } as loggedInModel) =
                 { onPress = Just GetPlaylists
                 , label = text "Update playlists' list"
                 }
-        , viewPlaylists loggedInModel
+        , viewPlaylists model
         ]
 
 
-viewPlaylists : LoggedInModel -> Element LoggedInMsg
+viewPlaylists : Model -> Element Msg
 viewPlaylists model =
     case model.playlists of
         NotAsked ->
@@ -120,7 +150,7 @@ viewPlaylists model =
             innerViewPlaylists model playlists
 
 
-innerViewPlaylists : LoggedInModel -> List SimplifiedPlaylistObject -> Element LoggedInMsg
+innerViewPlaylists : Model -> List SimplifiedPlaylistObject -> Element Msg
 innerViewPlaylists model playlists =
     let
         header : String -> Element msg
@@ -141,14 +171,14 @@ innerViewPlaylists model playlists =
                 ]
                 (text label)
 
-        isSelected : { a | id : Types.Id } -> Bool
+        isSelected : { a | id : Id } -> Bool
         isSelected playlist =
             Just playlist.id == model.selectedPlaylist
 
         shrinkColumn :
             String
             -> (SimplifiedPlaylistObject -> String)
-            -> Element.Column Context SimplifiedPlaylistObject LoggedInMsg
+            -> Element.Column Context SimplifiedPlaylistObject Msg
         shrinkColumn label prop =
             { header = header label
             , width = shrink

@@ -1,11 +1,14 @@
-module Theme exposing (Attribute, Element, buttonPrimary, buttonSecondary, color, padding, rythm, spacing)
+module Theme exposing (Attribute, Context, Element, buttonPrimary, buttonSecondary, color, padding, rythm, spacing)
 
 import Element.WithContext as Element exposing (Color)
 import Element.WithContext.Background as Background
 import Element.WithContext.Border as Border
 import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
-import Types exposing (Context)
+
+
+type alias Context =
+    {}
 
 
 type alias Element msg =

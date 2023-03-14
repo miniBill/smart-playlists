@@ -1,11 +1,11 @@
-module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Id, LoggedInModel, LoggedInMsg(..), Path(..), ToBackend(..), ToFrontend(..), User)
+module Types exposing (BackendModel, BackendMsg(..), FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), ToBackend(..), ToFrontend(..))
 
-import Api exposing (SimplifiedPlaylistObject)
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Http
 import Lamdera exposing (ClientId, SessionId)
-import RemoteData exposing (RemoteData)
+import LoggedIn exposing (AccessToken, User)
+import Theme exposing (Context)
 import Time
 import Url exposing (Url)
 
@@ -16,10 +16,6 @@ type alias FrontendModel =
     , context : Context
     , here : Time.Zone
     }
-
-
-type alias Context =
-    {}
 
 
 type Path
@@ -33,32 +29,7 @@ type FrontendInnerModel
     | GettingToken
     | GotError String
     | GettingUserId AccessToken
-    | LoggedIn LoggedInModel
-
-
-type alias LoggedInModel =
-    { accessToken : AccessToken
-    , user : User
-    , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
-    , selectedPlaylist : Maybe Id
-    }
-
-
-type alias Id =
-    String
-
-
-type alias AccessToken =
-    { accessToken : String
-    , expiresAt : Time.Posix
-    , refreshToken : String
-    }
-
-
-type alias User =
-    { id : String
-    , displayName : String
-    }
+    | LoggedIn LoggedIn.Model
 
 
 type alias BackendModel =
@@ -69,15 +40,9 @@ type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | Here Time.Zone
-    | LoggedInMsg LoggedInMsg
-    | WithTime LoggedInMsg Time.Posix
+    | LoggedInMsg LoggedIn.Msg
+    | WithTime LoggedIn.Msg Time.Posix
     | GotCurrentUserProfile (Result Http.Error User)
-
-
-type LoggedInMsg
-    = GetPlaylists
-    | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
-    | SelectPlaylist (Maybe Id)
 
 
 type ToBackend

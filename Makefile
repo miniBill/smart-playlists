@@ -13,7 +13,7 @@ build/spotify-web-api-fixed.json: build/spotify-web-api-fixed.yaml Makefile
 
 GENERATOR_PATH = ../elm-api-sdk-generator
 
-generated/Api.elm: build/spotify-web-api-fixed.json ${GENERATOR_PATH}/script/src/Cli.elm ${GENERATOR_PATH}/script/src/CliMonad.elm ${GENERATOR_PATH}/script/src/Common.elm Makefile
+generated/Api.elm: build/spotify-web-api-fixed.json ${GENERATOR_PATH}/script/src/Cli.elm ${GENERATOR_PATH}/script/elm.json ${GENERATOR_PATH}/script/src/CliMonad.elm ${GENERATOR_PATH}/script/src/Common.elm Makefile
 	(export ORIGIN=$$(realpath --relative-to ${GENERATOR_PATH} $$(pwd)); cd ${GENERATOR_PATH}; npm run dev $$ORIGIN/build/spotify-web-api-fixed.json -- --output $$ORIGIN/generated/Api.elm)
 	elm-format --yes $@
 

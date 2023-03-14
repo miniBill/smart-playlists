@@ -7,6 +7,7 @@ import Element.WithContext as Element exposing (centerX, centerY, column, el, fi
 import Element.WithContext.Background as Background
 import Element.WithContext.Border as Border
 import Element.WithContext.Font as Font
+import Element.WithContext.Input as Input
 import Env
 import Http
 import Lamdera
@@ -15,7 +16,7 @@ import SHA256
 import Task exposing (Task)
 import Theme exposing (Element)
 import Time
-import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..))
+import Types exposing (Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), LoggedInModel, LoggedInMsg(..), Path(..), ToBackend(..), ToFrontend(..))
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((<?>))
@@ -140,27 +141,11 @@ update msg model =
         Here here ->
             ( { model | here = here }, Cmd.none )
 
-        TimedMsg tmsg ->
-            ( model, Task.perform (WithTime tmsg) Time.now )
+        LoggedInMsg lmsg ->
+            ( model, Task.perform (WithTime lmsg) Time.now )
 
-        WithTime tmsg time ->
-            timedUpdate time tmsg model
-
-        GotPlaylists result ->
-            case model.inner of
-                LoggedIn inner ->
-                    ( { model
-                        | inner =
-                            LoggedIn
-                                { inner
-                                    | playlists = RemoteData.fromResult result
-                                }
-                      }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+        WithTime lmsg time ->
+            timedUpdate time lmsg model
 
         GotCurrentUserProfile (Ok user) ->
             case model.inner of
@@ -171,6 +156,7 @@ update msg model =
                                 { accessToken = accessToken
                                 , user = user
                                 , playlists = NotAsked
+                                , selectedPlaylist = Nothing
                                 }
                       }
                     , Nav.pushUrl model.key "/"
@@ -183,6 +169,7 @@ update msg model =
                                 { accessToken = accessToken
                                 , user = user
                                 , playlists = NotAsked
+                                , selectedPlaylist = Nothing
                                 }
                       }
                     , Cmd.none
@@ -199,33 +186,50 @@ update msg model =
             Debug.todo "branch 'GotCurrentUserProfile (Err _)' not implemented"
 
 
-timedUpdate : Time.Posix -> TimedMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
-timedUpdate _ msg model =
+timedUpdate : Time.Posix -> LoggedInMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
+timedUpdate now msg model =
     case model.inner of
-        LoggedIn inner ->
-            case msg of
-                GetPlaylists ->
-                    ( { model
-                        | inner =
-                            LoggedIn
-                                { inner
-                                    | playlists = Loading
-                                }
-                      }
-                    , unpaginate Api.getAListOfCurrentUsersPlaylistsTask
-                        { authorization =
-                            { bearer = inner.accessToken.accessToken
-                            }
-                        , params =
-                            { limit = Nothing
-                            , offset = Nothing
-                            }
-                        , toMsg = GotPlaylists
-                        }
-                    )
+        LoggedIn loggedInModel ->
+            let
+                ( newModel, cmd ) =
+                    loggedInUpdate now msg loggedInModel
+            in
+            ( { model | inner = LoggedIn newModel }
+            , Cmd.map LoggedInMsg cmd
+            )
 
         _ ->
             ( model, Cmd.none )
+
+
+loggedInUpdate : Time.Posix -> LoggedInMsg -> LoggedInModel -> ( LoggedInModel, Cmd LoggedInMsg )
+loggedInUpdate now msg model =
+    case msg of
+        GetPlaylists ->
+            ( { model
+                | playlists = Loading
+              }
+            , unpaginate Api.getAListOfCurrentUsersPlaylistsTask
+                { authorization =
+                    { bearer = model.accessToken.accessToken
+                    }
+                , params =
+                    { limit = Nothing
+                    , offset = Nothing
+                    }
+                , toMsg = GotPlaylists
+                }
+            )
+
+        GotPlaylists result ->
+            ( { model | playlists = RemoteData.fromResult result }
+            , Cmd.none
+            )
+
+        SelectPlaylist selectedPlaylist ->
+            ( { model | selectedPlaylist = selectedPlaylist }
+            , Cmd.none
+            )
 
 
 unpaginate :
@@ -336,35 +340,41 @@ innerView model =
         GettingUserId _ ->
             paragraph [] [ text "Logging in..." ]
 
-        LoggedIn { user, playlists } ->
-            column
-                [ Theme.spacing
-                , Theme.padding
-                ]
-                [ textColumn []
-                    [ paragraph []
-                        [ text "Logged in!" ]
-                    , paragraph []
-                        [ text <| "Current user: " ++ user.displayName ]
-                    ]
-                , if playlists == NotAsked then
-                    Theme.buttonPrimary []
-                        { onPress = Just <| TimedMsg GetPlaylists
-                        , label = text "Get your playlists"
-                        }
-
-                  else
-                    Theme.buttonSecondary []
-                        { onPress = Just <| TimedMsg GetPlaylists
-                        , label = text "Update playlists' list"
-                        }
-                , viewPlaylists playlists
-                ]
+        LoggedIn loggedInModel ->
+            viewLoggedIn loggedInModel
+                |> Element.map LoggedInMsg
 
 
-viewPlaylists : RemoteData Http.Error (List SimplifiedPlaylistObject) -> Element FrontendMsg
-viewPlaylists playlistsData =
-    case playlistsData of
+viewLoggedIn : LoggedInModel -> Element LoggedInMsg
+viewLoggedIn ({ user, playlists } as loggedInModel) =
+    column
+        [ Theme.spacing
+        , Theme.padding
+        ]
+        [ textColumn []
+            [ paragraph []
+                [ text "Logged in!" ]
+            , paragraph []
+                [ text <| "Current user: " ++ user.displayName ]
+            ]
+        , if playlists == NotAsked then
+            Theme.buttonPrimary []
+                { onPress = Just GetPlaylists
+                , label = text "Get your playlists"
+                }
+
+          else
+            Theme.buttonSecondary []
+                { onPress = Just GetPlaylists
+                , label = text "Update playlists' list"
+                }
+        , viewPlaylists loggedInModel
+        ]
+
+
+viewPlaylists : LoggedInModel -> Element LoggedInMsg
+viewPlaylists model =
+    case model.playlists of
         NotAsked ->
             Element.none
 
@@ -382,11 +392,11 @@ viewPlaylists playlistsData =
                 ]
 
         Success playlists ->
-            innerViewPlaylists playlists
+            innerViewPlaylists model playlists
 
 
-innerViewPlaylists : List SimplifiedPlaylistObject -> Element FrontendMsg
-innerViewPlaylists playlists =
+innerViewPlaylists : LoggedInModel -> List SimplifiedPlaylistObject -> Element LoggedInMsg
+innerViewPlaylists model playlists =
     let
         header : String -> Element msg
         header label =
@@ -406,14 +416,27 @@ innerViewPlaylists playlists =
                 ]
                 (text label)
 
+        isSelected : { a | id : Types.Id } -> Bool
+        isSelected playlist =
+            Just playlist.id == model.selectedPlaylist
+
         shrinkColumn :
             String
-            -> (obj -> String)
-            -> Element.Column Context obj msg
+            -> (SimplifiedPlaylistObject -> String)
+            -> Element.Column Context SimplifiedPlaylistObject LoggedInMsg
         shrinkColumn label prop =
             { header = header label
             , width = shrink
-            , view = text << prop
+            , view =
+                \playlist ->
+                    if isSelected playlist then
+                        el [ Font.bold ] <| text <| prop playlist
+
+                    else
+                        Input.button []
+                            { label = text <| prop playlist
+                            , onPress = Just (SelectPlaylist <| Just playlist.id)
+                            }
             }
     in
     column [ Theme.spacing ]

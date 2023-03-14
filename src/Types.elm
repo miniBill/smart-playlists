@@ -1,4 +1,4 @@
-module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Path(..), TimedMsg(..), ToBackend(..), ToFrontend(..), User)
+module Types exposing (AccessToken, BackendModel, BackendMsg(..), Context, FrontendInnerModel(..), FrontendModel, FrontendMsg(..), Id, LoggedInModel, LoggedInMsg(..), Path(..), ToBackend(..), ToFrontend(..), User)
 
 import Api exposing (SimplifiedPlaylistObject)
 import Browser exposing (UrlRequest)
@@ -33,11 +33,19 @@ type FrontendInnerModel
     | GettingToken
     | GotError String
     | GettingUserId AccessToken
-    | LoggedIn
-        { accessToken : AccessToken
-        , user : User
-        , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
-        }
+    | LoggedIn LoggedInModel
+
+
+type alias LoggedInModel =
+    { accessToken : AccessToken
+    , user : User
+    , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
+    , selectedPlaylist : Maybe Id
+    }
+
+
+type alias Id =
+    String
 
 
 type alias AccessToken =
@@ -61,14 +69,15 @@ type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | Here Time.Zone
-    | TimedMsg TimedMsg
-    | WithTime TimedMsg Time.Posix
-    | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
+    | LoggedInMsg LoggedInMsg
+    | WithTime LoggedInMsg Time.Posix
     | GotCurrentUserProfile (Result Http.Error User)
 
 
-type TimedMsg
+type LoggedInMsg
     = GetPlaylists
+    | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
+    | SelectPlaylist (Maybe Id)
 
 
 type ToBackend

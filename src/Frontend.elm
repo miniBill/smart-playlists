@@ -9,7 +9,6 @@ import Element.WithContext.Font as Font
 import Env
 import Lamdera
 import LoggedIn
-import RemoteData exposing (RemoteData(..))
 import SHA256
 import Task
 import Theme exposing (Element)
@@ -150,12 +149,7 @@ update msg model =
                 GettingUserId accessToken ->
                     ( { model
                         | inner =
-                            LoggedIn
-                                { accessToken = accessToken
-                                , user = user
-                                , playlists = NotAsked
-                                , selectedPlaylist = Nothing
-                                }
+                            LoggedIn <| LoggedIn.init accessToken user
                       }
                     , Nav.pushUrl model.key "/"
                     )
@@ -163,12 +157,7 @@ update msg model =
                 LoggedIn { accessToken } ->
                     ( { model
                         | inner =
-                            LoggedIn
-                                { accessToken = accessToken
-                                , user = user
-                                , playlists = NotAsked
-                                , selectedPlaylist = Nothing
-                                }
+                            LoggedIn <| LoggedIn.init accessToken user
                       }
                     , Cmd.none
                     )

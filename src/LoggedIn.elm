@@ -1,4 +1,4 @@
-module LoggedIn exposing (AccessToken, Id, Model, Msg(..), User, update, view)
+module LoggedIn exposing (AccessToken, Id, Model, Msg(..), SelectedPlaylist, User, init, update, view)
 
 import Api exposing (SimplifiedPlaylistObject)
 import Element.WithContext as Element exposing (column, el, paddingEach, paragraph, rgb, shrink, text, textColumn)
@@ -16,8 +16,14 @@ type alias Model =
     { accessToken : AccessToken
     , user : User
     , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
-    , selectedPlaylist : Maybe Id
+    , selectedPlaylist : SelectedPlaylist
     }
+
+
+type SelectedPlaylist
+    = SelectedPlaylistNone
+    | SelectedPlaylistLoading Id
+    | SelectedPlaylistLoaded Id
 
 
 type alias AccessToken =
@@ -40,7 +46,17 @@ type alias Id =
 type Msg
     = GetPlaylists
     | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
-    | SelectPlaylist (Maybe Id)
+    | SelectPlaylist Id
+    | GotPlaylist Id (Result Http.Error (List Api.PlaylistTrackObject))
+
+
+init : AccessToken -> User -> Model
+init accessToken user =
+    { accessToken = accessToken
+    , user = user
+    , playlists = NotAsked
+    , selectedPlaylist = SelectedPlaylistNone
+    }
 
 
 update : Time.Posix -> Msg -> Model -> ( Model, Cmd Msg )
@@ -68,9 +84,26 @@ update _ msg model =
             )
 
         SelectPlaylist selectedPlaylist ->
-            ( { model | selectedPlaylist = selectedPlaylist }
-            , Cmd.none
+            ( { model | selectedPlaylist = SelectedPlaylistLoading selectedPlaylist }
+            , unpaginate Api.getPlaylistsTracksTask
+                { authorization = { bearer = model.accessToken.accessToken }
+                , params =
+                    { playlist_id = selectedPlaylist
+                    , limit = Nothing
+                    , offset = Nothing
+                    , market = Nothing
+                    , fields = Nothing
+                    , additional_types = Nothing
+                    }
+                , toMsg = GotPlaylist selectedPlaylist
+                }
             )
+
+        GotPlaylist id (Ok items) ->
+            Debug.todo "branch 'GotPlaylist _' not implemented"
+
+        GotPlaylist _ (Err _) ->
+            Debug.todo "branch 'GotPlaylist _ (Err _)' not implemented"
 
 
 unpaginate :
@@ -173,7 +206,15 @@ innerViewPlaylists model playlists =
 
         isSelected : { a | id : Id } -> Bool
         isSelected playlist =
-            Just playlist.id == model.selectedPlaylist
+            case model.selectedPlaylist of
+                SelectedPlaylistLoading id ->
+                    playlist.id == id
+
+                SelectedPlaylistLoaded id ->
+                    playlist.id == id
+
+                SelectedPlaylistNone ->
+                    False
 
         shrinkColumn :
             String
@@ -190,7 +231,7 @@ innerViewPlaylists model playlists =
                     else
                         Input.button []
                             { label = text <| prop playlist
-                            , onPress = Just (SelectPlaylist <| Just playlist.id)
+                            , onPress = Just (SelectPlaylist playlist.id)
                             }
             }
     in
@@ -205,6 +246,15 @@ innerViewPlaylists model playlists =
             "Showing "
                 ++ String.fromInt (List.length playlists)
                 ++ " playlists"
+        , case model.selectedPlaylist of
+            SelectedPlaylistNone ->
+                Element.none
+
+            SelectedPlaylistLoading _ ->
+                text "branch 'SelectedPlaylistLoading _' not implemented"
+
+            SelectedPlaylistLoaded _ ->
+                text "branch 'SelectedPlaylistLoaded _' not implemented"
         ]
 
 

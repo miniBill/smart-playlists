@@ -24,7 +24,16 @@
          properties:
            items:
              type: array
-@@ -6022,6 +6032,19 @@
+@@ -5683,6 +5693,8 @@
+       allOf:
+       - $ref: '#/components/schemas/PagingObject'
+       - type: object
++        required:
++        - items
+         properties:
+           items:
+             type: array
+@@ -6022,6 +6034,19 @@
      SimplifiedPlaylistObject:
        type: object
        x-spotify-docs-type: SimplifiedPlaylistObject

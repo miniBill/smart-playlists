@@ -8,13 +8,10 @@ build/spotify-web-api-releases.json: Makefile
 build/spotify-web-api-original.yaml: build/spotify-web-api-releases.json Makefile
 	curl -sSL $$(jq -r '.[0].assets[] | select(.name == "fixed-spotify-open-api.yml").browser_download_url' < $<) > $@
 
-build/spotify-web-api-fixed.json: build/spotify-web-api-fixed.yaml Makefile
-	nix-shell -p yq --run 'yq "." $<' > $@ || rm $@
-
 GENERATOR_PATH = ../elm-api-sdk-generator
 
-generated/Api.elm: build/spotify-web-api-fixed.json ${GENERATOR_PATH}/script/src/Cli.elm ${GENERATOR_PATH}/script/elm.json ${GENERATOR_PATH}/script/src/CliMonad.elm ${GENERATOR_PATH}/script/src/Common.elm Makefile
-	(export ORIGIN=$$(realpath --relative-to ${GENERATOR_PATH} $$(pwd)); cd ${GENERATOR_PATH}; npm run dev $$ORIGIN/build/spotify-web-api-fixed.json -- --output $$ORIGIN/generated/Api.elm)
+generated/Api.elm: build/spotify-web-api-fixed.yaml ${GENERATOR_PATH}/script/src/Cli.elm ${GENERATOR_PATH}/script/elm.json ${GENERATOR_PATH}/script/src/CliMonad.elm ${GENERATOR_PATH}/script/src/Common.elm Makefile
+	(export ORIGIN=$$(realpath --relative-to ${GENERATOR_PATH} $$(pwd)); cd ${GENERATOR_PATH}; npm run dev $$ORIGIN/build/spotify-web-api-fixed.yaml -- --output $$ORIGIN/generated/Api.elm)
 	elm-format --yes $@
 
 build/spotify-web-api-fixed.yaml: build/spotify-web-api-original.yaml src/api-patch.diff Makefile

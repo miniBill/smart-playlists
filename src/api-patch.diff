@@ -1,6 +1,15 @@
 --- build/spotify-web-api-original.yaml
 +++ build/spotify-web-api-fixed.yaml
-@@ -4785,6 +4785,14 @@
+@@ -4554,6 +4554,8 @@
+     PlaylistTrackObject:
+       type: object
+       x-spotify-docs-type: PlaylistTrackObject
++      required:
++      - track
+       properties:
+         added_at:
+           type: string
+@@ -4785,6 +4787,14 @@
      PrivateUserObject:
        type: object
        x-spotify-docs-type: PrivateUserObject
@@ -15,7 +24,7 @@
        properties:
          country:
            type: string
-@@ -5609,6 +5617,8 @@
+@@ -5609,6 +5619,8 @@
        allOf:
        - $ref: '#/components/schemas/PagingObject'
        - type: object
@@ -24,7 +33,7 @@
          properties:
            items:
              type: array
-@@ -5683,6 +5693,8 @@
+@@ -5683,6 +5695,8 @@
        allOf:
        - $ref: '#/components/schemas/PagingObject'
        - type: object
@@ -33,7 +42,7 @@
          properties:
            items:
              type: array
-@@ -6022,6 +6034,19 @@
+@@ -6022,6 +6036,19 @@
      SimplifiedPlaylistObject:
        type: object
        x-spotify-docs-type: SimplifiedPlaylistObject
@@ -53,19 +62,12 @@
        properties:
          collaborative:
            type: boolean
-@@ -6679,7 +6704,6 @@
+@@ -6166,6 +6193,8 @@
+     TrackObject:
        type: object
-       required:
-       - album_type
--      - total_tracks
-       - available_markets
-       - external_urls
-       - href
-@@ -6689,7 +6713,6 @@
-       - release_date
-       - release_date_precision
-       - type
--      - uri
+       x-spotify-docs-type: TrackObject
++      required:
++      - name
        properties:
-         album_type:
-           type: string
+         album:
+           allOf:

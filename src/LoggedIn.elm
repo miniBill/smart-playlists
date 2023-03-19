@@ -103,7 +103,12 @@ update _ msg model =
             )
 
         GotPlaylist id (Ok items) ->
-            ( { model | selectedPlaylist = SelectedPlaylistLoaded id items }, Cmd.none )
+            ( { model
+                | selectedPlaylist = SelectedPlaylistLoaded id items
+                , error = Nothing
+              }
+            , Cmd.none
+            )
 
         GotPlaylist _ (Err e) ->
             ( { model | error = Just <| httpErrorToString e }, Cmd.none )
@@ -218,24 +223,6 @@ viewPlaylists model =
 innerViewPlaylists : Model -> List SimplifiedPlaylistObject -> Element Msg
 innerViewPlaylists model playlists =
     let
-        header : String -> Element msg
-        header label =
-            el
-                [ Border.widthEach
-                    { top = 0
-                    , left = 0
-                    , right = 0
-                    , bottom = 1
-                    }
-                , paddingEach
-                    { top = 0
-                    , left = 0
-                    , right = Theme.rythm
-                    , bottom = 2
-                    }
-                ]
-                (text label)
-
         isSelected : { a | id : Id } -> Bool
         isSelected playlist =
             case model.selectedPlaylist of
@@ -253,7 +240,7 @@ innerViewPlaylists model playlists =
             -> (SimplifiedPlaylistObject -> String)
             -> Element.Column Context SimplifiedPlaylistObject Msg
         shrinkColumn label prop =
-            { header = header label
+            { header = tableHeader label
             , width = shrink
             , view =
                 \playlist ->
@@ -285,9 +272,67 @@ innerViewPlaylists model playlists =
             SelectedPlaylistLoading _ ->
                 text "Loading playlist..."
 
-            SelectedPlaylistLoaded _ _ ->
-                text "branch 'SelectedPlaylistLoaded _' not implemented"
+            SelectedPlaylistLoaded _ tracks ->
+                viewTracks tracks
         ]
+
+
+tableHeader : String -> Element msg
+tableHeader label =
+    el
+        [ Border.widthEach
+            { top = 0
+            , left = 0
+            , right = 0
+            , bottom = 1
+            }
+        , paddingEach
+            { top = 0
+            , left = 0
+            , right = Theme.rythm
+            , bottom = 2
+            }
+        ]
+        (text label)
+
+
+viewTracks : List Api.PlaylistTrackObject -> Element Msg
+viewTracks tracks =
+    let
+        nameColumn : Element.Column Context PlaylistTrackObjectMerged msg
+        nameColumn =
+            { header = tableHeader "Name"
+            , view = \{ name } -> text name
+            , width = shrink
+            }
+    in
+    column [ Theme.spacing ]
+        [ text "Tracks:"
+        , Element.table []
+            { data = List.map mergeTrackObject tracks
+            , columns = [ nameColumn ]
+            }
+        ]
+
+
+mergeTrackObject : Api.PlaylistTrackObject -> PlaylistTrackObjectMerged
+mergeTrackObject trackObject =
+    case trackObject.track of
+        Api.TrackObjectOrEpisodeObject_EpisodeObject ep ->
+            { name = ep.name
+            , track = trackObject.track
+            }
+
+        Api.TrackObjectOrEpisodeObject_TrackObject tr ->
+            { name = tr.name
+            , track = trackObject.track
+            }
+
+
+type alias PlaylistTrackObjectMerged =
+    { name : String
+    , track : Api.TrackObjectOrEpisodeObject
+    }
 
 
 httpErrorToUserAndHiddenString : Http.Error -> ( String, String )

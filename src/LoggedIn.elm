@@ -25,7 +25,7 @@ type alias Model =
 type SelectedPlaylist
     = SelectedPlaylistNone
     | SelectedPlaylistLoading Id
-    | SelectedPlaylistLoaded Id
+    | SelectedPlaylistLoaded Id (List Api.PlaylistTrackObject)
 
 
 type alias AccessToken =
@@ -103,7 +103,7 @@ update _ msg model =
             )
 
         GotPlaylist id (Ok items) ->
-            Debug.todo "branch 'GotPlaylist _' not implemented"
+            ( { model | selectedPlaylist = SelectedPlaylistLoaded id items }, Cmd.none )
 
         GotPlaylist _ (Err e) ->
             ( { model | error = Just <| httpErrorToString e }, Cmd.none )
@@ -242,7 +242,7 @@ innerViewPlaylists model playlists =
                 SelectedPlaylistLoading id ->
                     playlist.id == id
 
-                SelectedPlaylistLoaded id ->
+                SelectedPlaylistLoaded id _ ->
                     playlist.id == id
 
                 SelectedPlaylistNone ->
@@ -285,7 +285,7 @@ innerViewPlaylists model playlists =
             SelectedPlaylistLoading _ ->
                 text "Loading playlist..."
 
-            SelectedPlaylistLoaded _ ->
+            SelectedPlaylistLoaded _ _ ->
                 text "branch 'SelectedPlaylistLoaded _' not implemented"
         ]
 

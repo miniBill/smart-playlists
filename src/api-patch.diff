@@ -53,3 +53,19 @@
        properties:
          collaborative:
            type: boolean
+@@ -6679,7 +6704,6 @@
+       type: object
+       required:
+       - album_type
+-      - total_tracks
+       - available_markets
+       - external_urls
+       - href
+@@ -6689,7 +6713,6 @@
+       - release_date
+       - release_date_precision
+       - type
+-      - uri
+       properties:
+         album_type:
+           type: string

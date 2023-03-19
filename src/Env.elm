@@ -13,4 +13,4 @@ redirectUrl =
 
 clientSecret : String
 clientSecret =
-    ""
+    "91c4188b360f4d4e8dac88d6cec1f239"

@@ -1,7 +1,7 @@
 module LoggedIn exposing (AccessToken, Id, Model, Msg(..), SelectedPlaylist, User, init, update, view)
 
 import Api exposing (SimplifiedPlaylistObject)
-import Element.WithContext as Element exposing (column, el, paddingEach, paragraph, rgb, shrink, text, textColumn)
+import Element.WithContext as Element exposing (column, el, fill, height, paddingEach, paragraph, rgb, scrollbarY, shrink, text, textColumn, width)
 import Element.WithContext.Border as Border
 import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
@@ -165,6 +165,8 @@ view ({ user, playlists, error } as model) =
     column
         [ Theme.spacing
         , Theme.padding
+        , height fill
+        , width fill
         ]
         [ textColumn []
             [ paragraph []
@@ -254,7 +256,11 @@ innerViewPlaylists model playlists =
                             }
             }
     in
-    column [ Theme.spacing ]
+    column
+        [ Theme.spacing
+        , height fill
+        , width fill
+        ]
         [ Element.table []
             { data = playlists
             , columns =
@@ -306,9 +312,17 @@ viewTracks tracks =
             , width = shrink
             }
     in
-    column [ Theme.spacing ]
+    column
+        [ Theme.spacing
+        , height fill
+        , width fill
+        ]
         [ text "Tracks:"
-        , Element.table []
+        , Element.table
+            [ scrollbarY
+            , height fill
+            , width fill
+            ]
             { data = List.map mergeTrackObject tracks
             , columns = [ nameColumn ]
             }

@@ -5,6 +5,7 @@ import Element.WithContext as Element exposing (column, el, paddingEach, paragra
 import Element.WithContext.Border as Border
 import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
+import Html
 import Http
 import RemoteData exposing (RemoteData(..))
 import Task exposing (Task)
@@ -17,6 +18,7 @@ type alias Model =
     , user : User
     , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
     , selectedPlaylist : SelectedPlaylist
+    , error : Maybe String
     }
 
 
@@ -56,6 +58,7 @@ init accessToken user =
     , user = user
     , playlists = NotAsked
     , selectedPlaylist = SelectedPlaylistNone
+    , error = Nothing
     }
 
 
@@ -102,8 +105,27 @@ update _ msg model =
         GotPlaylist id (Ok items) ->
             Debug.todo "branch 'GotPlaylist _' not implemented"
 
-        GotPlaylist _ (Err _) ->
-            Debug.todo "branch 'GotPlaylist _ (Err _)' not implemented"
+        GotPlaylist _ (Err e) ->
+            ( { model | error = Just <| httpErrorToString e }, Cmd.none )
+
+
+httpErrorToString : Http.Error -> String
+httpErrorToString err =
+    case err of
+        Http.Timeout ->
+            "Timeout"
+
+        Http.BadUrl badUrl ->
+            "Bad url: " ++ badUrl
+
+        Http.NetworkError ->
+            "Network error"
+
+        Http.BadStatus badStatus ->
+            "Bad status: " ++ String.fromInt badStatus
+
+        Http.BadBody badBody ->
+            "Bad body: " ++ badBody
 
 
 unpaginate :
@@ -134,7 +156,7 @@ unpaginate toTask { params, authorization, toMsg } =
 
 
 view : Model -> Element Msg
-view ({ user, playlists } as model) =
+view ({ user, playlists, error } as model) =
     column
         [ Theme.spacing
         , Theme.padding
@@ -157,6 +179,16 @@ view ({ user, playlists } as model) =
                 , label = text "Update playlists' list"
                 }
         , viewPlaylists model
+        , case error of
+            Nothing ->
+                Element.none
+
+            Just err ->
+                textColumn []
+                    [ paragraph [] [ text "ERRRRRROR" ]
+                    , Element.html <|
+                        Html.pre [] [ Html.text err ]
+                    ]
         ]
 
 
@@ -251,7 +283,7 @@ innerViewPlaylists model playlists =
                 Element.none
 
             SelectedPlaylistLoading _ ->
-                text "branch 'SelectedPlaylistLoading _' not implemented"
+                text "Loading playlist..."
 
             SelectedPlaylistLoaded _ ->
                 text "branch 'SelectedPlaylistLoaded _' not implemented"

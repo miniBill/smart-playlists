@@ -7,8 +7,10 @@ import Element.WithContext as Element exposing (centerX, centerY, fill, height, 
 import Element.WithContext.Background as Background
 import Element.WithContext.Font as Font
 import Env
+import Http
 import Lamdera
 import LoggedIn
+import Process
 import SHA256
 import Task
 import Theme exposing (Element)
@@ -144,7 +146,7 @@ update msg model =
         WithTime lmsg time ->
             timedUpdate time lmsg model
 
-        GotCurrentUserProfile (Ok user) ->
+        GotCurrentUserProfile _ (Ok user) ->
             case model.inner of
                 GettingUserId accessToken ->
                     ( { model
@@ -165,7 +167,26 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        GotCurrentUserProfile (Err e) ->
+        GotCurrentUserProfile accessToken (Err (Http.BadStatus 503)) ->
+            ( model
+            , Process.sleep 100
+                |> Task.andThen
+                    (\_ ->
+                        Api.getCurrentUsersProfileTask
+                            { authorization = { bearer = accessToken.accessToken } }
+                    )
+                |> Task.attempt
+                    (GotCurrentUserProfile accessToken
+                        << Result.map
+                            (\user ->
+                                { id = user.id
+                                , displayName = user.display_name
+                                }
+                            )
+                    )
+            )
+
+        GotCurrentUserProfile _ (Err e) ->
             let
                 _ =
                     Debug.log "GotCurrentUserProfile error" e
@@ -211,7 +232,7 @@ updateFromBackend msg model =
             , Api.getCurrentUsersProfile
                 { authorization = { bearer = accessToken.accessToken }
                 , toMsg =
-                    GotCurrentUserProfile
+                    GotCurrentUserProfile accessToken
                         << Result.map
                             (\user ->
                                 { id = user.id

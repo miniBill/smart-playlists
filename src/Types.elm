@@ -42,7 +42,7 @@ type FrontendMsg
     | Here Time.Zone
     | LoggedInMsg LoggedIn.Msg
     | WithTime LoggedIn.Msg Time.Posix
-    | GotCurrentUserProfile (Result Http.Error User)
+    | GotCurrentUserProfile AccessToken (Result Http.Error User)
 
 
 type ToBackend

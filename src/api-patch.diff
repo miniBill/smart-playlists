@@ -62,7 +62,7 @@
        properties:
          collaborative:
            type: boolean
-@@ -6166,6 +6193,8 @@
+@@ -6166,10 +6193,13 @@
      TrackObject:
        type: object
        x-spotify-docs-type: TrackObject
@@ -70,4 +70,30 @@
 +      - name
        properties:
          album:
-           allOf:
+-          allOf:
++          oneOf:
+           - $ref: '#/components/schemas/SimplifiedAlbumObject'
++          - $ref: '#/components/schemas/LocalFileNoAlbumObject'
+           description: |
+             The album on which the track appears. The album object includes a link in `href` to full information about the album.
+         artists:
+@@ -6792,6 +6822,19 @@
+               $ref: '#/components/schemas/SimplifiedArtistObject'
+             description: |
+               The artists of the album. Each artist object includes a link in `href` to more detailed information about the artist.
++    LocalFileNoAlbumObject:
++      type: object
++      required:
++      - type
++      properties:
++        type:
++          type: string
++        artists:
++          type: array
++          items:
++            $ref: '#/components/schemas/SimplifiedArtistObject'
++          description: |
++            The artists of the album. Each artist object includes a link in `href` to more detailed information about the artist.
+     ChapterObject:
+       x-spotify-docs-type: ChapterObject
+       type: object

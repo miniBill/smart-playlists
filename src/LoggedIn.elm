@@ -19,6 +19,8 @@ type alias Model =
     , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
     , selectedPlaylist : SelectedPlaylist
     , error : Maybe String
+    , sortPlaylistsBy : PlaylistsColumn
+    , sortPlaylistBy : PlaylistColumn
     }
 
 
@@ -50,6 +52,17 @@ type Msg
     | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
     | SelectPlaylist Id
     | GotPlaylist Id (Result Http.Error (List Api.PlaylistTrackObject))
+    | SortPlaylistsBy PlaylistsColumn
+    | SortPlaylistBy PlaylistColumn
+
+
+type PlaylistsColumn
+    = PlaylistName
+
+
+type PlaylistColumn
+    = TrackName
+    | ArtistsName
 
 
 init : AccessToken -> User -> Model
@@ -59,6 +72,8 @@ init accessToken user =
     , playlists = NotAsked
     , selectedPlaylist = SelectedPlaylistNone
     , error = Nothing
+    , sortPlaylistsBy = PlaylistName
+    , sortPlaylistBy = TrackName
     }
 
 
@@ -112,6 +127,12 @@ update _ msg model =
 
         GotPlaylist _ (Err e) ->
             ( { model | error = Just <| httpErrorToString e }, Cmd.none )
+
+        SortPlaylistsBy column ->
+            ( { model | sortPlaylistsBy = column }, Cmd.none )
+
+        SortPlaylistBy column ->
+            ( { model | sortPlaylistBy = column }, Cmd.none )
 
 
 httpErrorToString : Http.Error -> String
@@ -242,19 +263,22 @@ innerViewPlaylists model playlists =
             -> (SimplifiedPlaylistObject -> String)
             -> Element.Column Context SimplifiedPlaylistObject Msg
         shrinkColumn label prop =
-            { header = tableHeader label
-            , width = shrink
-            , view =
-                \playlist ->
-                    if isSelected playlist then
-                        el [ Font.bold ] <| text <| prop playlist
+            sortableColumn
+                { sortedBy = model.sortPlaylistsBy
+                , toMsg = SortPlaylistsBy
+                , label = label
+                , columnName = PlaylistName
+                , view =
+                    \playlist ->
+                        if isSelected playlist then
+                            el [ Font.bold ] <| text <| prop playlist
 
-                    else
-                        Input.button []
-                            { label = text <| prop playlist
-                            , onPress = Just (SelectPlaylist playlist.id)
-                            }
-            }
+                        else
+                            Input.button []
+                                { label = text <| prop playlist
+                                , onPress = Just (SelectPlaylist playlist.id)
+                                }
+                }
     in
     column
         [ Theme.spacing
@@ -262,7 +286,13 @@ innerViewPlaylists model playlists =
         , width fill
         ]
         [ Element.table []
-            { data = playlists
+            { data =
+                playlists
+                    |> List.sortBy
+                        (case model.sortPlaylistsBy of
+                            PlaylistName ->
+                                .name
+                        )
             , columns =
                 [ shrinkColumn "Name" .name
                 ]
@@ -279,13 +309,13 @@ innerViewPlaylists model playlists =
                 text "Loading playlist..."
 
             SelectedPlaylistLoaded _ tracks ->
-                viewTracks tracks
+                viewTracks model tracks
         ]
 
 
-tableHeader : String -> Element msg
-tableHeader label =
-    el
+tableHeader : { label : String, onPress : Maybe msg } -> Element msg
+tableHeader { label, onPress } =
+    Input.button
         [ Border.widthEach
             { top = 0
             , left = 0
@@ -299,19 +329,13 @@ tableHeader label =
             , bottom = 2
             }
         ]
-        (text label)
+        { label = text label
+        , onPress = onPress
+        }
 
 
-viewTracks : List Api.PlaylistTrackObject -> Element Msg
-viewTracks tracks =
-    let
-        nameColumn : Element.Column Context PlaylistTrackObjectMerged msg
-        nameColumn =
-            { header = tableHeader "Name"
-            , view = \{ name } -> text name
-            , width = shrink
-            }
-    in
+viewTracks : Model -> List Api.PlaylistTrackObject -> Element Msg
+viewTracks model tracks =
     column
         [ Theme.spacing
         , height fill
@@ -323,10 +347,88 @@ viewTracks tracks =
             , height fill
             , width fill
             ]
-            { data = List.map mergeTrackObject tracks
-            , columns = [ nameColumn ]
+            { data =
+                List.map mergeTrackObject tracks
+                    |> List.sortBy
+                        (case model.sortPlaylistBy of
+                            TrackName ->
+                                .name
+                                    >> String.toLower
+
+                            ArtistsName ->
+                                .artists
+                                    >> List.map String.toLower
+                                    >> List.sort
+                                    >> String.join ", "
+                        )
+            , columns =
+                [ sortableColumn
+                    { sortedBy = model.sortPlaylistBy
+                    , label = "Name"
+                    , toMsg = SortPlaylistBy
+                    , columnName = TrackName
+                    , view =
+                        \{ name } ->
+                            paragraph
+                                [ width <| Element.maximum 400 fill
+                                , height fill
+                                , Border.widthEach
+                                    { bottom = 1
+                                    , left = 0
+                                    , right = 0
+                                    , top = 0
+                                    }
+                                , Border.color <| Element.rgb255 0xC0 0xC0 0xC0
+                                ]
+                                [ text name ]
+                    }
+                , sortableColumn
+                    { sortedBy = model.sortPlaylistBy
+                    , label = "Artists"
+                    , toMsg = SortPlaylistBy
+                    , columnName = ArtistsName
+                    , view =
+                        \{ artists } ->
+                            paragraph
+                                [ Border.widthEach
+                                    { bottom = 1
+                                    , left = 0
+                                    , right = 0
+                                    , top = 0
+                                    }
+                                , Border.color <| Element.rgb255 0xC0 0xC0 0xC0
+                                , width fill
+                                , height fill
+                                ]
+                                [ text <| String.join ", " artists ]
+                    }
+                ]
             }
         ]
+
+
+sortableColumn :
+    { sortedBy : columnName
+    , label : String
+    , toMsg : columnName -> msg
+    , columnName : columnName
+    , view : record -> Element msg
+    }
+    -> Element.Column Context record msg
+sortableColumn cfg =
+    { header =
+        tableHeader
+            { onPress = Just (cfg.toMsg cfg.columnName)
+            , label =
+                if cfg.sortedBy == cfg.columnName then
+                    cfg.label ++ " V"
+
+                else
+                    cfg.label
+            }
+    , view = cfg.view
+    , width = shrink
+    }
 
 
 mergeTrackObject : Api.PlaylistTrackObject -> PlaylistTrackObjectMerged
@@ -334,17 +436,23 @@ mergeTrackObject trackObject =
     case trackObject.track of
         Api.TrackObjectOrEpisodeObject_EpisodeObject ep ->
             { name = ep.name
+            , artists = []
             , track = trackObject.track
             }
 
         Api.TrackObjectOrEpisodeObject_TrackObject tr ->
             { name = tr.name
+            , artists =
+                tr.artists
+                    |> Maybe.withDefault []
+                    |> List.map .name
             , track = trackObject.track
             }
 
 
 type alias PlaylistTrackObjectMerged =
     { name : String
+    , artists : List String
     , track : Api.TrackObjectOrEpisodeObject
     }
 

@@ -357,7 +357,7 @@ viewTracks model tracks =
 
                             ArtistsName ->
                                 .artists
-                                    >> List.map String.toLower
+                                    >> List.map normalizeArtistName
                                     >> List.sort
                                     >> String.join ", "
                         )
@@ -405,6 +405,21 @@ viewTracks model tracks =
                 ]
             }
         ]
+
+
+normalizeArtistName : String -> String
+normalizeArtistName artistName =
+    let
+        lower : String
+        lower =
+            String.toLower artistName
+    in
+    case String.split " " lower of
+        "the" :: rest ->
+            String.join " " rest
+
+        _ ->
+            lower
 
 
 sortableColumn :

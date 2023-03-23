@@ -1,4 +1,4 @@
-module LoggedIn exposing (AccessToken, Id, Model, Msg(..), SelectedPlaylist, User, init, update, view)
+module LoggedIn exposing (AccessToken, Id, Model, Msg(..), PlaylistColumn, PlaylistsColumn, SelectedPlaylist, User, init, update, view)
 
 import Api exposing (SimplifiedPlaylistObject)
 import Element.WithContext as Element exposing (column, el, fill, height, paddingEach, paragraph, rgb, scrollbarY, shrink, text, textColumn, width)

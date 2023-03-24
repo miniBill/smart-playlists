@@ -352,14 +352,14 @@ viewTracks model tracks =
                     |> List.sortBy
                         (case model.sortPlaylistBy of
                             TrackName ->
-                                .name
-                                    >> String.toLower
+                                \{ name } -> String.toLower name
 
                             ArtistsName ->
-                                .artists
-                                    >> List.map normalizeArtistName
-                                    >> List.sort
-                                    >> String.join ", "
+                                \{ artists } ->
+                                    artists
+                                        |> List.map normalizeArtistName
+                                        |> List.sort
+                                        |> String.join ", "
                         )
             , columns =
                 [ sortableColumn

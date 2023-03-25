@@ -16,6 +16,7 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm-community/json-extra": "4.3.0",
+            "elm-community/list-extra": "8.7.0",
             "folkertdev/elm-sha2": "1.0.0",
             "krisajenkins/remotedata": "6.0.1",
             "lamdera/codecs": "1.0.0",

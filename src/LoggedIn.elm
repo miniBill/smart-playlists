@@ -124,6 +124,8 @@ update _ msg model =
             , Cmd.none
             )
 
+        -- GotPlaylist _ (Err (Http.BadStatus 401)) ->
+        --     ( { model | error = Just <| httpErrorToString e }, Cmd.none )
         GotPlaylist _ (Err e) ->
             ( { model | error = Just <| httpErrorToString e }, Cmd.none )
 
@@ -376,13 +378,13 @@ normalizeArtistName artistName =
 mergeTrackObject : Api.PlaylistTrackObject -> PlaylistTrackObjectMerged
 mergeTrackObject trackObject =
     case trackObject.track of
-        Api.TrackObjectOrEpisodeObject_EpisodeObject ep ->
+        Api.EpisodeObjectOrTrackObject_EpisodeObject ep ->
             { name = ep.name
             , artists = []
             , track = trackObject.track
             }
 
-        Api.TrackObjectOrEpisodeObject_TrackObject tr ->
+        Api.EpisodeObjectOrTrackObject_TrackObject tr ->
             { name = tr.name
             , artists =
                 tr.artists
@@ -395,7 +397,7 @@ mergeTrackObject trackObject =
 type alias PlaylistTrackObjectMerged =
     { name : String
     , artists : List String
-    , track : Api.TrackObjectOrEpisodeObject
+    , track : Api.EpisodeObjectOrTrackObject 
     }
 
 

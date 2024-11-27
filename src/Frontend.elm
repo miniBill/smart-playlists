@@ -6,7 +6,6 @@ import Element.WithContext as Element exposing (centerX, centerY, fill, height, 
 import Element.WithContext.Background as Background
 import Element.WithContext.Font as Font
 import Env
-import Http
 import Lamdera
 import LoggedIn
 import OpenApi.Common

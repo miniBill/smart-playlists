@@ -1,4 +1,4 @@
-module Env exposing (..)
+module Env exposing (clientId, clientSecret, redirectUrl)
 
 
 clientId : String

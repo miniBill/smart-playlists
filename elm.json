@@ -22,6 +22,7 @@
             "lamdera/codecs": "1.0.0",
             "lamdera/core": "1.0.0",
             "miniBill/elm-fast-dict": "1.2.1",
+            "miniBill/elm-rope": "1.0.0",
             "miniBill/elm-ui-with-context": "2.0.0",
             "prikhi/http-tasks": "1.0.0",
             "truqu/elm-base64": "2.0.4",

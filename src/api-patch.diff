@@ -1,5 +1,5 @@
---- build/spotify-web-api-original.yaml	2024-11-27 13:08:58.841785309 +0100
-+++ build/spotify-web-api-fixed.yaml	2024-11-27 14:17:31.138979501 +0100
+--- build/spotify-web-api-original.yaml	2024-11-27 14:21:24.727680851 +0100
++++ build/spotify-web-api-fixed.yaml	2024-11-27 14:22:02.087850387 +0100
 @@ -2,11 +2,8 @@
  info:
    description: |
@@ -304,12 +304,13 @@
        properties:
          collaborative:
            type: boolean
-@@ -5708,10 +5761,13 @@
+@@ -5708,10 +5761,14 @@
      TrackObject:
        type: object
        x-spotify-docs-type: TrackObject
 +      required:
 +      - name
++      - artists
        properties:
          album:
            allOf:
@@ -318,7 +319,7 @@
            description: |
              The album on which the track appears. The album object includes a link in `href` to full information about the album.
          artists:
-@@ -6324,6 +6380,19 @@
+@@ -6324,6 +6381,19 @@
                $ref: "#/components/schemas/SimplifiedArtistObject"
              description: |
                The artists of the album. Each artist object includes a link in `href` to more detailed information about the artist.
@@ -338,7 +339,7 @@
      ArtistDiscographyAlbumObject:
        x-spotify-docs-type: ArtistDiscographyAlbumObject
        allOf:
-@@ -6728,6 +6797,8 @@
+@@ -6728,6 +6798,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object

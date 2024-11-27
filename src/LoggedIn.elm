@@ -4,9 +4,11 @@ import Element.WithContext as Element exposing (column, el, fill, height, paragr
 import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
 import FastDict
+import FastSet
 import Html
 import OpenApi.Common
 import RemoteData exposing (RemoteData(..))
+import Rope exposing (Rope)
 import Spotify.Api
 import Spotify.Types exposing (CursorPagedPlayHistory, EpisodeObject_Or_TrackObject, GetAListOfCurrentUsersPlaylists_Error, GetPlaylistsTracks_Error, GetRecentlyPlayed_Error, PlaylistTrackObject, SimplifiedPlaylistObject)
 import Task exposing (Task)
@@ -82,6 +84,13 @@ init accessToken user =
     }
 
 
+type alias HistoryData =
+    { history : Rope { at : Time.Posix, id : String }
+    , tracks : FastDict.Dict String { artists : FastSet.Set String }
+    , artists : FastDict.Dict String { name : String }
+    }
+
+
 update : Time.Posix -> Msg -> Model -> ( Model, Cmd Msg )
 update _ msg model =
     case msg of
@@ -143,13 +152,13 @@ update _ msg model =
 
         GetHistory ->
             ( { model | history = Loading }
-            , Spotify.Api.getRecentlyPlayedTask
-                { authorization = { bearer = model.accessToken.accessToken }
-                , params =
-                    { limit = Just 50
-                    , after = Nothing
-                    , before = Nothing
+            , getHistoryPage model.accessToken.accessToken
+                { data =
+                    { history = Rope.empty
+                    , tracks = FastDict.empty
+                    , artists = FastDict.empty
                     }
+                , before = Nothing
                 }
                 |> Task.attempt GotHistory
             )
@@ -158,11 +167,52 @@ update _ msg model =
             ( { model
                 | history =
                     result
-                        |> Debug.log "result"
                         |> Result.map (\_ -> FastDict.empty)
                         |> RemoteData.fromResult
               }
             , Cmd.none
+            )
+
+
+getHistoryPage : String -> { data : HistoryData, before : Maybe Int } -> Task (OpenApi.Common.Error GetRecentlyPlayed_Error String) HistoryData
+getHistoryPage accessToken { data, before } =
+    Spotify.Api.getRecentlyPlayedTask
+        { authorization = { bearer = accessToken }
+        , params =
+            { limit = Just 50
+            , after = Nothing
+            , before = before
+            }
+        }
+        |> Task.andThen
+            (\page ->
+                let
+                    next : HistoryData
+                    next =
+                        { history =
+                            page.items
+                                |> List.map
+                                    (\{ played_at, track } ->
+                                        { at = played_at
+                                        , id = track.id
+                                        }
+                                    )
+                                |> Rope.prependTo data.history
+                        }
+                in
+                case
+                    page.cursors
+                        |> Maybe.andThen .before
+                        |> Maybe.andThen String.toInt
+                of
+                    Just nextBefore ->
+                        getHistoryPage
+                            { data = next
+                            , before = nextBefore
+                            }
+
+                    Nothing ->
+                        Task.succeed next
             )
 
 

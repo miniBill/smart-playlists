@@ -15,6 +15,5 @@ build/spotify-web-api-fixed.yaml: build/spotify-web-api-original.yaml src/api-pa
 	cp $< $@
 	patch $@ src/api-patch.diff
 
-.PHONY: gen-patch
-gen-patch:
+src/api-patch.diff:
 	diff -u build/spotify-web-api-original.yaml build/spotify-web-api-fixed.yaml > src/api-patch.diff --label build/spotify-web-api-original.yaml --label build/spotify-web-api-fixed.yaml || true

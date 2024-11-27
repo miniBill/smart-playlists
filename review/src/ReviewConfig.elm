@@ -7,7 +7,6 @@ import NoConfusingPrefixOperator
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoDuplicatePorts
-import NoEtaReducibleLambdas
 import NoExposingEverything
 import NoImportingEverything
 import NoMissingTypeAnnotation
@@ -15,7 +14,6 @@ import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
 import NoModuleOnExposedNames
 import NoPrematureLetComputation
-import NoRecordAliasConstructor
 import NoSimpleLetBody
 import NoUnsafePorts
 import NoUnused.CustomTypeConstructorArgs
@@ -41,10 +39,6 @@ config =
     , NoDebug.TodoOrToString.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     , NoDuplicatePorts.rule
-    , NoEtaReducibleLambdas.rule
-        { lambdaReduceStrategy = NoEtaReducibleLambdas.AlwaysRemoveLambdaWhenPossible
-        , argumentNamePredicate = always True
-        }
     , NoExposingEverything.rule
     , NoImportingEverything.rule []
     , NoMissingTypeAnnotation.rule
@@ -52,7 +46,6 @@ config =
     , NoMissingTypeExpose.rule
     , NoModuleOnExposedNames.rule
     , NoPrematureLetComputation.rule
-    , NoRecordAliasConstructor.rule
     , NoSimpleLetBody.rule
     , NoUnsafePorts.rule NoUnsafePorts.any
     , NoUnused.CustomTypeConstructorArgs.rule

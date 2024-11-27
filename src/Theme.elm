@@ -32,7 +32,7 @@ spacing =
 
 rythm : number
 rythm =
-    10
+    8
 
 
 buttonPrimary :

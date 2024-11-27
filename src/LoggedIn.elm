@@ -3,11 +3,12 @@ module LoggedIn exposing (AccessToken, Id, Model, Msg(..), PlaylistColumn, Playl
 import Element.WithContext as Element exposing (column, el, fill, height, paragraph, rgb, scrollbarY, text, textColumn, width)
 import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
+import FastDict
 import Html
 import OpenApi.Common
 import RemoteData exposing (RemoteData(..))
 import Spotify.Api
-import Spotify.Types exposing (EpisodeObject_Or_TrackObject, PlaylistTrackObject, SimplifiedPlaylistObject)
+import Spotify.Types exposing (CursorPagedPlayHistory, EpisodeObject_Or_TrackObject, GetAListOfCurrentUsersPlaylists_Error, GetPlaylistsTracks_Error, GetRecentlyPlayed_Error, PlaylistTrackObject, SimplifiedPlaylistObject)
 import Task exposing (Task)
 import Theme exposing (Element)
 import Time
@@ -16,11 +17,12 @@ import Time
 type alias Model =
     { accessToken : AccessToken
     , user : User
-    , playlists : RemoteData (OpenApi.Common.Error Spotify.Types.GetAListOfCurrentUsersPlaylists_Error String) (List SimplifiedPlaylistObject)
+    , playlists : RemoteData (OpenApi.Common.Error GetAListOfCurrentUsersPlaylists_Error String) (List SimplifiedPlaylistObject)
     , selectedPlaylist : SelectedPlaylist
     , error : Maybe String
     , sortPlaylistsBy : PlaylistsColumn
     , sortPlaylistBy : PlaylistColumn
+    , history : RemoteData (OpenApi.Common.Error GetRecentlyPlayed_Error String) (FastDict.Dict Int {})
     }
 
 
@@ -49,11 +51,13 @@ type alias Id =
 
 type Msg
     = GetPlaylists
-    | GotPlaylists (Result (OpenApi.Common.Error Spotify.Types.GetAListOfCurrentUsersPlaylists_Error String) (List SimplifiedPlaylistObject))
+    | GotPlaylists (Result (OpenApi.Common.Error GetAListOfCurrentUsersPlaylists_Error String) (List SimplifiedPlaylistObject))
     | SelectPlaylist Id
-    | GotPlaylist Id (Result (OpenApi.Common.Error Spotify.Types.GetPlaylistsTracks_Error String) (List PlaylistTrackObject))
+    | GotPlaylist Id (Result (OpenApi.Common.Error GetPlaylistsTracks_Error String) (List PlaylistTrackObject))
     | SortPlaylistsBy PlaylistsColumn
     | SortPlaylistBy PlaylistColumn
+    | GetHistory
+    | GotHistory (Result (OpenApi.Common.Error GetRecentlyPlayed_Error String) CursorPagedPlayHistory)
 
 
 type PlaylistsColumn
@@ -74,6 +78,7 @@ init accessToken user =
     , error = Nothing
     , sortPlaylistsBy = PlaylistName
     , sortPlaylistBy = TrackName
+    , history = NotAsked
     }
 
 
@@ -136,6 +141,30 @@ update _ msg model =
         SortPlaylistBy column ->
             ( { model | sortPlaylistBy = column }, Cmd.none )
 
+        GetHistory ->
+            ( { model | history = Loading }
+            , Spotify.Api.getRecentlyPlayedTask
+                { authorization = { bearer = model.accessToken.accessToken }
+                , params =
+                    { limit = Just 50
+                    , after = Nothing
+                    , before = Nothing
+                    }
+                }
+                |> Task.attempt GotHistory
+            )
+
+        GotHistory result ->
+            ( { model
+                | history =
+                    result
+                        |> Debug.log "result"
+                        |> Result.map (\_ -> FastDict.empty)
+                        |> RemoteData.fromResult
+              }
+            , Cmd.none
+            )
+
 
 openApiErrorToString : OpenApi.Common.Error err String -> String
 openApiErrorToString err =
@@ -196,32 +225,62 @@ unpaginate toTask { params, authorization, toMsg } =
 
 
 view : Model -> Element Msg
-view ({ user, playlists, error } as model) =
+view model =
     column
         [ Theme.spacing
         , Theme.padding
         , height fill
         , width fill
         ]
-        [ textColumn []
-            [ paragraph []
-                [ text "Logged in!" ]
-            , paragraph []
-                [ text <| "Current user: " ++ user.displayName ]
-            ]
-        , if playlists == NotAsked then
-            Theme.buttonPrimary []
-                { onPress = Just GetPlaylists
-                , label = text "Get your playlists"
-                }
+        [ paragraph []
+            [ text ("Logged in! Current user: " ++ model.user.displayName) ]
+        , case model.playlists of
+            NotAsked ->
+                Theme.buttonPrimary []
+                    { onPress = Just GetPlaylists
+                    , label = text "Get your playlists"
+                    }
 
-          else
-            Theme.buttonSecondary []
-                { onPress = Just GetPlaylists
-                , label = text "Update playlists' list"
-                }
+            Loading ->
+                Theme.buttonPrimary [] { onPress = Nothing, label = text "Getting your playlists..." }
+
+            Failure _ ->
+                Theme.buttonPrimary []
+                    { onPress = Just GetPlaylists
+                    , label = text "Get your playlists"
+                    }
+
+            Success _ ->
+                Theme.buttonSecondary []
+                    { onPress = Just GetPlaylists
+                    , label = text "Update playlists' list"
+                    }
         , viewPlaylists model
-        , case error of
+        , case model.history of
+            NotAsked ->
+                Theme.buttonPrimary []
+                    { onPress = Just GetHistory
+                    , label = text "Get your history"
+                    }
+
+            Loading ->
+                Theme.buttonPrimary []
+                    { onPress = Nothing
+                    , label = text "Getting your history"
+                    }
+
+            Failure _ ->
+                Theme.buttonPrimary []
+                    { onPress = Just GetHistory
+                    , label = text "Get your history"
+                    }
+
+            Success _ ->
+                Theme.buttonPrimary []
+                    { onPress = Just GetHistory
+                    , label = text "Update your history"
+                    }
+        , case model.error of
             Nothing ->
                 Element.none
 

@@ -109,13 +109,14 @@ authenticationUrl { state } =
         , Url.Builder.string "redirect_uri" Env.redirectUrl
         , Url.Builder.string "state"
             (SHA256.fromString state |> SHA256.toHex)
-        , Url.Builder.string "scopes" <|
+        , Url.Builder.string "scope" <|
             String.join " "
                 [ "playlist-read-private"
                 , "playlist-read-collaborative"
                 , "playlist-modify-public"
                 , "playlist-modify-private"
                 , "user-library-read"
+                , "user-read-recently-played"
                 ]
         ]
 

@@ -1,6 +1,5 @@
 module Frontend exposing (app)
 
-import Api
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Element.WithContext as Element exposing (centerX, centerY, fill, height, link, paragraph, text, width)
@@ -10,8 +9,11 @@ import Env
 import Http
 import Lamdera
 import LoggedIn
+import OpenApi.Common
 import Process
 import SHA256
+import Spotify.Api
+import Spotify.Types exposing (GetCurrentUsersProfile_Error)
 import Task
 import Theme exposing (Element)
 import Time
@@ -167,23 +169,12 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        GotCurrentUserProfile accessToken (Err (Http.BadStatus 503)) ->
+        GotCurrentUserProfile accessToken (Err (OpenApi.Common.KnownBadStatus 503 _)) ->
             ( model
-            , Process.sleep 100
+            , Process.sleep 1000
                 |> Task.andThen
-                    (\_ ->
-                        Api.getCurrentUsersProfileTask
-                            { authorization = { bearer = accessToken.accessToken } }
-                    )
-                |> Task.attempt
-                    (GotCurrentUserProfile accessToken
-                        << Result.map
-                            (\user ->
-                                { id = user.id
-                                , displayName = user.display_name
-                                }
-                            )
-                    )
+                    (\_ -> getCurrentUserProfileTask accessToken)
+                |> Task.attempt (GotCurrentUserProfile accessToken)
             )
 
         GotCurrentUserProfile _ (Err e) ->
@@ -229,16 +220,21 @@ updateFromBackend msg model =
 
         TFGotAccessToken (Ok accessToken) ->
             ( { model | inner = GettingUserId accessToken }
-            , Api.getCurrentUsersProfile
-                { authorization = { bearer = accessToken.accessToken }
-                , toMsg =
-                    GotCurrentUserProfile accessToken
-                        << Result.map
-                            (\user ->
-                                { id = user.id
-                                , displayName = user.display_name
-                                }
-                            )
+            , getCurrentUserProfileTask accessToken
+                |> Task.attempt (GotCurrentUserProfile accessToken)
+            )
+
+
+getCurrentUserProfileTask :
+    { a | accessToken : String }
+    -> Task.Task (OpenApi.Common.Error GetCurrentUsersProfile_Error String) { id : String, displayName : String }
+getCurrentUserProfileTask accessToken =
+    Spotify.Api.getCurrentUsersProfileTask
+        { authorization = { bearer = accessToken.accessToken } }
+        |> Task.map
+            (\user ->
+                { id = user.id
+                , displayName = user.display_name
                 }
             )
 

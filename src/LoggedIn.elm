@@ -1,12 +1,13 @@
 module LoggedIn exposing (AccessToken, Id, Model, Msg(..), PlaylistColumn, PlaylistsColumn, SelectedPlaylist, User, init, update, view)
 
-import Api exposing (SimplifiedPlaylistObject)
 import Element.WithContext as Element exposing (column, el, fill, height, paragraph, rgb, scrollbarY, text, textColumn, width)
 import Element.WithContext.Font as Font
 import Element.WithContext.Input as Input
 import Html
-import Http
+import OpenApi.Common
 import RemoteData exposing (RemoteData(..))
+import Spotify.Api
+import Spotify.Types exposing (EpisodeObject_Or_TrackObject, PlaylistTrackObject, SimplifiedPlaylistObject)
 import Task exposing (Task)
 import Theme exposing (Element)
 import Time
@@ -15,7 +16,7 @@ import Time
 type alias Model =
     { accessToken : AccessToken
     , user : User
-    , playlists : RemoteData Http.Error (List SimplifiedPlaylistObject)
+    , playlists : RemoteData (OpenApi.Common.Error Spotify.Types.GetAListOfCurrentUsersPlaylists_Error String) (List SimplifiedPlaylistObject)
     , selectedPlaylist : SelectedPlaylist
     , error : Maybe String
     , sortPlaylistsBy : PlaylistsColumn
@@ -26,7 +27,7 @@ type alias Model =
 type SelectedPlaylist
     = SelectedPlaylistNone
     | SelectedPlaylistLoading Id
-    | SelectedPlaylistLoaded Id (List Api.PlaylistTrackObject)
+    | SelectedPlaylistLoaded Id (List PlaylistTrackObject)
 
 
 type alias AccessToken =
@@ -48,9 +49,9 @@ type alias Id =
 
 type Msg
     = GetPlaylists
-    | GotPlaylists (Result Http.Error (List SimplifiedPlaylistObject))
+    | GotPlaylists (Result (OpenApi.Common.Error Spotify.Types.GetAListOfCurrentUsersPlaylists_Error String) (List SimplifiedPlaylistObject))
     | SelectPlaylist Id
-    | GotPlaylist Id (Result Http.Error (List Api.PlaylistTrackObject))
+    | GotPlaylist Id (Result (OpenApi.Common.Error Spotify.Types.GetPlaylistsTracks_Error String) (List PlaylistTrackObject))
     | SortPlaylistsBy PlaylistsColumn
     | SortPlaylistBy PlaylistColumn
 
@@ -83,7 +84,7 @@ update _ msg model =
             ( { model
                 | playlists = Loading
               }
-            , unpaginate Api.getAListOfCurrentUsersPlaylistsTask
+            , unpaginate Spotify.Api.getAListOfCurrentUsersPlaylistsTask
                 { authorization =
                     { bearer = model.accessToken.accessToken
                     }
@@ -102,7 +103,7 @@ update _ msg model =
 
         SelectPlaylist selectedPlaylist ->
             ( { model | selectedPlaylist = SelectedPlaylistLoading selectedPlaylist }
-            , unpaginate Api.getPlaylistsTracksTask
+            , unpaginate Spotify.Api.getPlaylistsTracksTask
                 { authorization = { bearer = model.accessToken.accessToken }
                 , params =
                     { playlist_id = selectedPlaylist
@@ -127,7 +128,7 @@ update _ msg model =
         -- GotPlaylist _ (Err (Http.BadStatus 401)) ->
         --     ( { model | error = Just <| httpErrorToString e }, Cmd.none )
         GotPlaylist _ (Err e) ->
-            ( { model | error = Just <| httpErrorToString e }, Cmd.none )
+            ( { model | error = Just <| openApiErrorToString e }, Cmd.none )
 
         SortPlaylistsBy column ->
             ( { model | sortPlaylistsBy = column }, Cmd.none )
@@ -136,30 +137,42 @@ update _ msg model =
             ( { model | sortPlaylistBy = column }, Cmd.none )
 
 
-httpErrorToString : Http.Error -> String
-httpErrorToString err =
+openApiErrorToString : OpenApi.Common.Error err String -> String
+openApiErrorToString err =
     case err of
-        Http.Timeout ->
+        OpenApi.Common.Timeout ->
             "Timeout"
 
-        Http.BadUrl badUrl ->
+        OpenApi.Common.BadUrl badUrl ->
             "Bad url: " ++ badUrl
 
-        Http.NetworkError ->
+        OpenApi.Common.NetworkError ->
             "Network error"
 
-        Http.BadStatus badStatus ->
-            "Bad status: " ++ String.fromInt badStatus
+        OpenApi.Common.KnownBadStatus badStatus _ ->
+            "Bad status (" ++ String.fromInt badStatus ++ ")"
 
-        Http.BadBody badBody ->
+        OpenApi.Common.BadBody _ badBody ->
             "Bad body: " ++ badBody
+
+        OpenApi.Common.UnknownBadStatus metadata body ->
+            "Bad status (" ++ String.fromInt metadata.statusCode ++ ") " ++ body
+
+        OpenApi.Common.BadErrorBody _ body ->
+            "Bad error body: " ++ body
 
 
 unpaginate :
-    ({ params : { params | offset : Maybe Int }, authorization : authorization }
+    ({ params : { params | offset : Maybe Int }
+     , authorization : authorization
+     }
      -> Task err { paginated | items : List item, total : Int }
     )
-    -> { params : { params | offset : Maybe Int }, authorization : authorization, toMsg : Result err (List item) -> msg }
+    ->
+        { params : { params | offset : Maybe Int }
+        , authorization : authorization
+        , toMsg : Result err (List item) -> msg
+        }
     -> Cmd msg
 unpaginate toTask { params, authorization, toMsg } =
     let
@@ -233,7 +246,7 @@ viewPlaylists model =
         Failure err ->
             let
                 ( visible, hidden ) =
-                    httpErrorToUserAndHiddenString err
+                    openApiErrorToUserAndHiddenString err
             in
             Element.row []
                 [ text visible
@@ -309,7 +322,7 @@ innerViewPlaylists model playlists =
         ]
 
 
-viewTracks : Model -> List Api.PlaylistTrackObject -> Element Msg
+viewTracks : Model -> List PlaylistTrackObject -> Element Msg
 viewTracks model tracks =
     let
         columns :
@@ -375,16 +388,16 @@ normalizeArtistName artistName =
             lower
 
 
-mergeTrackObject : Api.PlaylistTrackObject -> PlaylistTrackObjectMerged
+mergeTrackObject : PlaylistTrackObject -> PlaylistTrackObjectMerged
 mergeTrackObject trackObject =
     case trackObject.track of
-        Api.EpisodeObjectOrTrackObject_EpisodeObject ep ->
+        Spotify.Types.EpisodeObject_Or_TrackObject__EpisodeObject ep ->
             { name = ep.name
             , artists = []
             , track = trackObject.track
             }
 
-        Api.EpisodeObjectOrTrackObject_TrackObject tr ->
+        Spotify.Types.EpisodeObject_Or_TrackObject__TrackObject tr ->
             { name = tr.name
             , artists =
                 tr.artists
@@ -397,34 +410,44 @@ mergeTrackObject trackObject =
 type alias PlaylistTrackObjectMerged =
     { name : String
     , artists : List String
-    , track : Api.EpisodeObjectOrTrackObject 
+    , track : EpisodeObject_Or_TrackObject
     }
 
 
-httpErrorToUserAndHiddenString : Http.Error -> ( String, String )
-httpErrorToUserAndHiddenString err =
+openApiErrorToUserAndHiddenString : OpenApi.Common.Error err String -> ( String, String )
+openApiErrorToUserAndHiddenString err =
     case err of
-        Http.BadStatus code ->
+        OpenApi.Common.KnownBadStatus code _ ->
             ( "Unexpected answer from the server"
-            , "BadStatus " ++ String.fromInt code
+            , "KnownBadStatus " ++ String.fromInt code
             )
 
-        Http.BadUrl url ->
+        OpenApi.Common.UnknownBadStatus metadata _ ->
+            ( "Unexpected answer from the server"
+            , "KnownBadStatus " ++ String.fromInt metadata.statusCode
+            )
+
+        OpenApi.Common.BadUrl url ->
             ( "Something went wrong"
             , "BadUrl " ++ url
             )
 
-        Http.Timeout ->
+        OpenApi.Common.Timeout ->
             ( "No reply from the server"
             , "Timeout"
             )
 
-        Http.NetworkError ->
+        OpenApi.Common.NetworkError ->
             ( "Error connecting to the server"
             , "NetworkError"
             )
 
-        Http.BadBody msg ->
+        OpenApi.Common.BadBody _ msg ->
             ( "Unexpected answer from the server"
             , "BadBody " ++ msg
+            )
+
+        OpenApi.Common.BadErrorBody _ msg ->
+            ( "Unexpected answer from the server"
+            , "BadErrorBody " ++ msg
             )

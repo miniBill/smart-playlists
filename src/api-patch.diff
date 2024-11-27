@@ -1,5 +1,5 @@
---- build/spotify-web-api-original.yaml	2024-11-27 14:21:24.727680851 +0100
-+++ build/spotify-web-api-fixed.yaml	2024-11-27 14:22:02.087850387 +0100
+--- build/spotify-web-api-original.yaml
++++ build/spotify-web-api-fixed.yaml
 @@ -2,11 +2,8 @@
  info:
    description: |

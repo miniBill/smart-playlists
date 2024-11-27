@@ -61,16 +61,17 @@
        properties:
          external_urls:
            allOf:
-@@ -4196,6 +4189,8 @@
+@@ -4196,6 +4189,9 @@
      SimplifiedArtistObject:
        type: object
        x-spotify-docs-type: SimplifiedArtistObject
 +      required:
++      - id
 +      - name
        properties:
          external_urls:
            allOf:
-@@ -4227,6 +4222,9 @@
+@@ -4227,6 +4223,9 @@
      PlayHistoryObject:
        type: object
        x-spotify-docs-type: PlayHistoryObject
@@ -80,7 +81,7 @@
        properties:
          track:
            allOf:
-@@ -4244,6 +4242,8 @@
+@@ -4244,6 +4243,8 @@
      PlaylistTrackObject:
        type: object
        x-spotify-docs-type: PlaylistTrackObject
@@ -89,7 +90,7 @@
        properties:
          added_at:
            type: string
-@@ -4392,6 +4392,14 @@
+@@ -4392,6 +4393,14 @@
      PrivateUserObject:
        type: object
        x-spotify-docs-type: PrivateUserObject
@@ -104,7 +105,7 @@
        properties:
          country:
            type: string
-@@ -4825,7 +4833,6 @@
+@@ -4825,7 +4834,6 @@
            type: array
            description: |
              Pitch content is given by a “chroma” vector, corresponding to the 12 pitch classes C, C#, D to B, with values ranging from 0 to 1 that describe the relative dominance of every pitch in the chromatic scale. For example a C Major chord would likely be represented by large values of C, E and G (i.e. classes 0, 4, and 7).
@@ -112,7 +113,7 @@
              Vectors are normalized to 1 by their strongest dimension, therefore noisy sounds are likely represented by values that are all close to 1, while pure tones are described by one value at 1 (the pitch) and others near 0.
              As can be seen below, the 12 vector indices are a combination of low-power spectrum values at their respective pitch frequencies.
              ![pitch vector](https://developer.spotify.com/assets/audio/Pitch_vector.png)
-@@ -4841,10 +4848,8 @@
+@@ -4841,10 +4849,8 @@
            type: array
            description: |
              Timbre is the quality of a musical note or sound that distinguishes different types of musical instruments, or voices. It is a complex notion also referred to as sound color, texture, or tone quality, and is derived from the shape of a segment’s spectro-temporal surface, independently of pitch and loudness. The timbre feature is a vector that includes 12 unbounded values roughly centered around 0. Those values are high level abstractions of the spectral surface, ordered by degree of importance.
@@ -123,7 +124,7 @@
              The actual timbre of the segment is best described as a linear combination of these 12 basis functions weighted by the coefficient values: timbre = c1 x b1 + c2 x b2 + ... + c12 x b12, where c1 to c12 represent the 12 coefficients and b1 to b12 the 12 basis functions as displayed below. Timbre vectors are best used in comparison with each other.
            items:
              type: number
-@@ -5122,6 +5127,8 @@
+@@ -5122,6 +5128,8 @@
      CursorPagingObject:
        type: object
        x-spotify-docs-type: CursorPagingObject
@@ -132,7 +133,7 @@
        properties:
          href:
            type: string
-@@ -5147,6 +5154,8 @@
+@@ -5147,6 +5155,8 @@
        allOf:
        - $ref: "#/components/schemas/CursorPagingObject"
        - type: object
@@ -141,7 +142,7 @@
          properties:
            items:
              type: array
-@@ -5158,6 +5167,8 @@
+@@ -5158,6 +5168,8 @@
        allOf:
        - $ref: "#/components/schemas/CursorPagingObject"
        - type: object
@@ -150,7 +151,7 @@
          properties:
            items:
              type: array
-@@ -5214,6 +5225,8 @@
+@@ -5214,6 +5226,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -159,7 +160,7 @@
          properties:
            items:
              type: array
-@@ -5236,6 +5249,8 @@
+@@ -5236,6 +5250,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -168,7 +169,7 @@
          properties:
            items:
              type: array
-@@ -5247,6 +5262,8 @@
+@@ -5247,6 +5263,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -177,7 +178,7 @@
          properties:
            items:
              type: array
-@@ -5258,6 +5275,8 @@
+@@ -5258,6 +5276,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -186,7 +187,7 @@
          properties:
            items:
              type: array
-@@ -5269,6 +5288,8 @@
+@@ -5269,6 +5289,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -195,7 +196,7 @@
          properties:
            items:
              type: array
-@@ -5280,6 +5301,8 @@
+@@ -5280,6 +5302,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -204,7 +205,7 @@
          properties:
            items:
              type: array
-@@ -5291,6 +5314,8 @@
+@@ -5291,6 +5315,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -213,7 +214,7 @@
          properties:
            items:
              type: array
-@@ -5302,6 +5327,7 @@
+@@ -5302,6 +5328,7 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -221,7 +222,7 @@
          properties:
            items:
              type: array
-@@ -5313,6 +5339,8 @@
+@@ -5313,6 +5340,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -230,7 +231,7 @@
          properties:
            items:
              type: array
-@@ -5324,6 +5352,8 @@
+@@ -5324,6 +5353,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -239,7 +240,7 @@
          properties:
            items:
              type: array
-@@ -5335,6 +5365,8 @@
+@@ -5335,6 +5366,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -248,7 +249,7 @@
          properties:
            items:
              type: array
-@@ -5346,6 +5378,8 @@
+@@ -5346,6 +5379,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -257,7 +258,7 @@
          properties:
            items:
              type: array
-@@ -5357,6 +5391,8 @@
+@@ -5357,6 +5392,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -266,7 +267,7 @@
          properties:
            items:
              type: array
-@@ -5368,6 +5404,8 @@
+@@ -5368,6 +5405,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -275,7 +276,7 @@
          properties:
            items:
              type: array
-@@ -5379,6 +5417,8 @@
+@@ -5379,6 +5418,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -284,7 +285,7 @@
          properties:
            items:
              type: array
-@@ -5564,6 +5604,19 @@
+@@ -5564,6 +5605,19 @@
      SimplifiedPlaylistObject:
        type: object
        x-spotify-docs-type: SimplifiedPlaylistObject
@@ -304,11 +305,12 @@
        properties:
          collaborative:
            type: boolean
-@@ -5708,10 +5761,14 @@
+@@ -5708,10 +5762,15 @@
      TrackObject:
        type: object
        x-spotify-docs-type: TrackObject
 +      required:
++      - id
 +      - name
 +      - artists
        properties:
@@ -319,7 +321,7 @@
            description: |
              The album on which the track appears. The album object includes a link in `href` to full information about the album.
          artists:
-@@ -6324,6 +6381,19 @@
+@@ -6324,6 +6383,19 @@
                $ref: "#/components/schemas/SimplifiedArtistObject"
              description: |
                The artists of the album. Each artist object includes a link in `href` to more detailed information about the artist.
@@ -339,7 +341,7 @@
      ArtistDiscographyAlbumObject:
        x-spotify-docs-type: ArtistDiscographyAlbumObject
        allOf:
-@@ -6728,6 +6798,8 @@
+@@ -6728,6 +6800,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object

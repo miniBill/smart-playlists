@@ -24,7 +24,7 @@ type alias Model =
     , error : Maybe String
     , sortPlaylistsBy : PlaylistsColumn
     , sortPlaylistBy : PlaylistColumn
-    , history : RemoteData (OpenApi.Common.Error GetRecentlyPlayed_Error String) (FastDict.Dict Int {})
+    , history : RemoteData (OpenApi.Common.Error GetRecentlyPlayed_Error String) HistoryData
     }
 
 
@@ -59,7 +59,7 @@ type Msg
     | SortPlaylistsBy PlaylistsColumn
     | SortPlaylistBy PlaylistColumn
     | GetHistory
-    | GotHistory (Result (OpenApi.Common.Error GetRecentlyPlayed_Error String) CursorPagedPlayHistory)
+    | GotHistory (Result (OpenApi.Common.Error GetRecentlyPlayed_Error String) HistoryData)
 
 
 type PlaylistsColumn
@@ -164,14 +164,7 @@ update _ msg model =
             )
 
         GotHistory result ->
-            ( { model
-                | history =
-                    result
-                        |> Result.map (\_ -> FastDict.empty)
-                        |> RemoteData.fromResult
-              }
-            , Cmd.none
-            )
+            ( { model | history = RemoteData.fromResult result }, Cmd.none )
 
 
 getHistoryPage : String -> { data : HistoryData, before : Maybe Int } -> Task (OpenApi.Common.Error GetRecentlyPlayed_Error String) HistoryData
@@ -187,6 +180,10 @@ getHistoryPage accessToken { data, before } =
         |> Task.andThen
             (\page ->
                 let
+                    q : CursorPagedPlayHistory
+                    q =
+                        page
+
                     next : HistoryData
                     next =
                         { history =
@@ -197,18 +194,55 @@ getHistoryPage accessToken { data, before } =
                                         , id = track.id
                                         }
                                     )
+                                |> Rope.fromList
                                 |> Rope.prependTo data.history
+                        , tracks =
+                            List.foldl
+                                (\{ track } acc ->
+                                    if FastDict.member track.id acc then
+                                        acc
+
+                                    else
+                                        FastDict.insert
+                                            track.id
+                                            { artists =
+                                                track.artists
+                                                    |> List.map .id
+                                                    |> FastSet.fromList
+                                            }
+                                            acc
+                                )
+                                data.tracks
+                                page.items
+                        , artists =
+                            List.foldl
+                                (\{ track } acc ->
+                                    List.foldl
+                                        (\artist iacc ->
+                                            if FastDict.member artist.id iacc then
+                                                iacc
+
+                                            else
+                                                FastDict.insert
+                                                    artist.id
+                                                    { name = artist.name }
+                                                    iacc
+                                        )
+                                        acc
+                                        track.artists
+                                )
+                                data.artists
+                                page.items
                         }
                 in
                 case
-                    page.cursors
-                        |> Maybe.andThen .before
+                    page.cursors.before
                         |> Maybe.andThen String.toInt
                 of
                     Just nextBefore ->
-                        getHistoryPage
+                        getHistoryPage accessToken
                             { data = next
-                            , before = nextBefore
+                            , before = Just nextBefore
                             }
 
                     Nothing ->
@@ -510,7 +544,6 @@ mergeTrackObject trackObject =
             { name = tr.name
             , artists =
                 tr.artists
-                    |> Maybe.withDefault []
                     |> List.map .name
             , track = trackObject.track
             }

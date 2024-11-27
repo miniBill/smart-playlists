@@ -1,5 +1,5 @@
 .PHONY: all
-all: generated/Api.elm
+all: generated/Spotify/Api.elm
 
 build/spotify-web-api-releases.json:
 	mkdir -p build
@@ -8,11 +8,8 @@ build/spotify-web-api-releases.json:
 build/spotify-web-api-original.yaml: build/spotify-web-api-releases.json
 	curl -sSL $$(jq -r '.[0].assets[] | select(.name == "fixed-spotify-open-api.yml").browser_download_url' < $<) > $@
 
-GENERATOR_PATH = ../elm-api-sdk-generator
-
-generated/Api.elm: build/spotify-web-api-spaceless.yaml ${GENERATOR_PATH}/script/src/Cli.elm $(shell find ${GENERATOR_PATH}/src -type f -name '*.elm') Makefile
-	(export ORIGIN=$$(realpath --relative-to ${GENERATOR_PATH} $$(pwd)); cd ${GENERATOR_PATH}; npm run dev $$ORIGIN/build/spotify-web-api-spaceless.yaml -- --output $$ORIGIN/generated/Api.elm)
-	elm-format --yes $@
+generated/Spotify/Api.elm: build/spotify-web-api-spaceless.yaml Makefile
+	yarn elm-open-api --module-name Spotify build/spotify-web-api-spaceless.yaml
 
 build/spotify-web-api-fixed.yaml: build/spotify-web-api-original.yaml src/api-patch.diff Makefile
 	cp $< $@

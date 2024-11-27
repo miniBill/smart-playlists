@@ -124,16 +124,7 @@
              The actual timbre of the segment is best described as a linear combination of these 12 basis functions weighted by the coefficient values: timbre = c1 x b1 + c2 x b2 + ... + c12 x b12, where c1 to c12 represent the 12 coefficients and b1 to b12 the 12 basis functions as displayed below. Timbre vectors are best used in comparison with each other.
            items:
              type: number
-@@ -5122,6 +5128,8 @@
-     CursorPagingObject:
-       type: object
-       x-spotify-docs-type: CursorPagingObject
-+      required:
-+      - "cursors"
-       properties:
-         href:
-           type: string
-@@ -5147,6 +5155,8 @@
+@@ -5147,6 +5153,8 @@
        allOf:
        - $ref: "#/components/schemas/CursorPagingObject"
        - type: object
@@ -142,7 +133,7 @@
          properties:
            items:
              type: array
-@@ -5158,6 +5168,8 @@
+@@ -5158,6 +5166,8 @@
        allOf:
        - $ref: "#/components/schemas/CursorPagingObject"
        - type: object
@@ -151,7 +142,7 @@
          properties:
            items:
              type: array
-@@ -5214,6 +5226,8 @@
+@@ -5214,6 +5224,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -160,7 +151,7 @@
          properties:
            items:
              type: array
-@@ -5236,6 +5250,8 @@
+@@ -5236,6 +5248,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -169,7 +160,7 @@
          properties:
            items:
              type: array
-@@ -5247,6 +5263,8 @@
+@@ -5247,6 +5261,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -178,7 +169,7 @@
          properties:
            items:
              type: array
-@@ -5258,6 +5276,8 @@
+@@ -5258,6 +5274,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -187,7 +178,7 @@
          properties:
            items:
              type: array
-@@ -5269,6 +5289,8 @@
+@@ -5269,6 +5287,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -196,7 +187,7 @@
          properties:
            items:
              type: array
-@@ -5280,6 +5302,8 @@
+@@ -5280,6 +5300,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -205,7 +196,7 @@
          properties:
            items:
              type: array
-@@ -5291,6 +5315,8 @@
+@@ -5291,6 +5313,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -214,7 +205,7 @@
          properties:
            items:
              type: array
-@@ -5302,6 +5328,7 @@
+@@ -5302,6 +5326,7 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -222,7 +213,7 @@
          properties:
            items:
              type: array
-@@ -5313,6 +5340,8 @@
+@@ -5313,6 +5338,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -231,7 +222,7 @@
          properties:
            items:
              type: array
-@@ -5324,6 +5353,8 @@
+@@ -5324,6 +5351,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -240,7 +231,7 @@
          properties:
            items:
              type: array
-@@ -5335,6 +5366,8 @@
+@@ -5335,6 +5364,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -249,7 +240,7 @@
          properties:
            items:
              type: array
-@@ -5346,6 +5379,8 @@
+@@ -5346,6 +5377,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -258,7 +249,7 @@
          properties:
            items:
              type: array
-@@ -5357,6 +5392,8 @@
+@@ -5357,6 +5390,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -267,7 +258,7 @@
          properties:
            items:
              type: array
-@@ -5368,6 +5405,8 @@
+@@ -5368,6 +5403,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -276,7 +267,7 @@
          properties:
            items:
              type: array
-@@ -5379,6 +5418,8 @@
+@@ -5379,6 +5416,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
@@ -285,7 +276,7 @@
          properties:
            items:
              type: array
-@@ -5564,6 +5605,19 @@
+@@ -5564,6 +5603,19 @@
      SimplifiedPlaylistObject:
        type: object
        x-spotify-docs-type: SimplifiedPlaylistObject
@@ -305,7 +296,7 @@
        properties:
          collaborative:
            type: boolean
-@@ -5708,10 +5762,15 @@
+@@ -5708,10 +5760,15 @@
      TrackObject:
        type: object
        x-spotify-docs-type: TrackObject
@@ -321,7 +312,7 @@
            description: |
              The album on which the track appears. The album object includes a link in `href` to full information about the album.
          artists:
-@@ -6324,6 +6383,19 @@
+@@ -6324,6 +6381,19 @@
                $ref: "#/components/schemas/SimplifiedArtistObject"
              description: |
                The artists of the album. Each artist object includes a link in `href` to more detailed information about the artist.
@@ -341,7 +332,7 @@
      ArtistDiscographyAlbumObject:
        x-spotify-docs-type: ArtistDiscographyAlbumObject
        allOf:
-@@ -6728,6 +6800,8 @@
+@@ -6728,6 +6798,8 @@
        allOf:
        - $ref: "#/components/schemas/PagingObject"
        - type: object
